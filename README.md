@@ -21,7 +21,7 @@ $PIN_SH_FILE -injection child -ifeellucky -t <your_tool.so> -- <executable>
 
 ## Makefile Modifications
 
-The following Makefiles are located in the `source/tools/Config/makefile.unix.config` directory. A copy of these Makefiles with the modifications included can be found in the `modified_makefiles` directory.
+The following Makefiles are located in the `source/tools/Config` directory. A copy of these Makefiles with the modifications included can be found in the `modified_makefiles` directory.
   
 ### makefile.default.rules
 The following lines are added under Line 166 of `makefile.default.rules` to include the C++ library for HDF5.
