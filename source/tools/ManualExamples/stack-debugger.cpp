@@ -1,33 +1,14 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * This is an example tool that adds extended debugger commands.  See the
  * Pin User Manual section "Debugging the Application while Running Under Pin"
@@ -47,25 +28,23 @@ END_LEGAL */
 #include <cctype>
 #include <map>
 #include "pin.H"
-
+using std::cerr;
+using std::endl;
+using std::string;
 
 // Command line switches for this tool.
 //
-KNOB<ADDRINT> KnobStackBreak(KNOB_MODE_WRITEONCE, "pintool",
-    "stackbreak", "0",
-    "Stop at breakpoint when thread uses this much stack (use with -appdebug_enable");
-KNOB<std::string> KnobOut(KNOB_MODE_WRITEONCE, "pintool",
-    "o", "",
-    "When using -stackbreak, debugger connection information is printed to this file (default stderr)");
-KNOB<UINT32> KnobTimeout(KNOB_MODE_WRITEONCE, "pintool",
-    "timeout", "0",
-    "When using -stackbreak, wait for this many seconds for debugger to connect (zero means wait forever)");
-
+KNOB< ADDRINT > KnobStackBreak(KNOB_MODE_WRITEONCE, "pintool", "stackbreak", "0",
+                               "Stop at breakpoint when thread uses this much stack (use with -appdebug_enable");
+KNOB< std::string > KnobOut(KNOB_MODE_WRITEONCE, "pintool", "o", "",
+                            "When using -stackbreak, debugger connection information is printed to this file (default stderr)");
+KNOB< UINT32 >
+    KnobTimeout(KNOB_MODE_WRITEONCE, "pintool", "timeout", "0",
+                "When using -stackbreak, wait for this many seconds for debugger to connect (zero means wait forever)");
 
 // Virtual register we use to point to each thread's TINFO structure.
 //
 static REG RegTinfo;
-
 
 // Information about each thread.
 //
@@ -79,24 +58,22 @@ struct TINFO
     std::ostringstream _os; // Used to format messages.
 };
 
-typedef std::map<THREADID, TINFO *> TINFO_MAP;
+typedef std::map< THREADID, TINFO* > TINFO_MAP;
 static TINFO_MAP ThreadInfos;
 
-static std::ostream *Output = &std::cerr;
+static std::ostream* Output       = &std::cerr;
 static bool EnableInstrumentation = false;
-static bool BreakOnNewMax = false;
-static ADDRINT BreakOnSize = 0;
+static bool BreakOnNewMax         = false;
+static ADDRINT BreakOnSize        = 0;
 
-
-static VOID OnThreadStart(THREADID, CONTEXT *, INT32, VOID *);
-static VOID OnThreadEnd(THREADID, const CONTEXT *, INT32, VOID *);
-static VOID Instruction(INS, VOID *);
+static VOID OnThreadStart(THREADID, CONTEXT*, INT32, VOID*);
+static VOID OnThreadEnd(THREADID, const CONTEXT*, INT32, VOID*);
+static VOID Instruction(INS, VOID*);
 static ADDRINT OnStackChangeIf(ADDRINT, ADDRINT);
-static VOID DoBreakpoint(const CONTEXT *, THREADID);
+static VOID DoBreakpoint(const CONTEXT*, THREADID);
 static void ConnectDebugger();
-static BOOL DebugInterpreter(THREADID, CONTEXT *, const string &, string *, VOID *);
-static std::string TrimWhitespace(const std::string &);
-
+static BOOL DebugInterpreter(THREADID, CONTEXT*, const string&, string*, VOID*);
+static std::string TrimWhitespace(const std::string&);
 
 /* ===================================================================== */
 /* Print Help Message                                                    */
@@ -113,8 +90,10 @@ INT32 Usage()
 /* Main                                                                  */
 /* ===================================================================== */
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
+    PIN_InitSymbols();
+
     if (PIN_Init(argc, argv)) return Usage();
 
     if (PIN_GetDebugStatus() == DEBUG_STATUS_DISABLED)
@@ -125,13 +104,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (!KnobOut.Value().empty())
-        Output = new std::ofstream(KnobOut.Value().c_str());
+    if (!KnobOut.Value().empty()) Output = new std::ofstream(KnobOut.Value().c_str());
 
     if (KnobStackBreak.Value())
     {
         EnableInstrumentation = true;
-        BreakOnSize = KnobStackBreak.Value();
+        BreakOnSize           = KnobStackBreak.Value();
     }
 
     // Allocate a virtual register that each thread uses to point to its
@@ -154,7 +132,6 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-
 /*
  * This call-back implements the extended debugger commands.
  *
@@ -165,15 +142,14 @@ int main(int argc, char *argv[])
  *
  * Returns: TRUE if we recognize this extended command.
  */
-static BOOL DebugInterpreter(THREADID tid, CONTEXT *ctxt, const string &cmd, string *result, VOID *)
+static BOOL DebugInterpreter(THREADID tid, CONTEXT* ctxt, const string& cmd, string* result, VOID*)
 {
     TINFO_MAP::iterator it = ThreadInfos.find(tid);
-    if (it == ThreadInfos.end())
-        return FALSE;
-    TINFO *tinfo = it->second;
+    if (it == ThreadInfos.end()) return FALSE;
+    TINFO* tinfo = it->second;
 
     std::string line = TrimWhitespace(cmd);
-    *result = "";
+    *result          = "";
 
     if (line == "help")
     {
@@ -203,7 +179,7 @@ static BOOL DebugInterpreter(THREADID tid, CONTEXT *ctxt, const string &cmd, str
         {
             PIN_RemoveInstrumentation();
             EnableInstrumentation = true;
-            *result = "Stack tracing enabled.\n";
+            *result               = "Stack tracing enabled.\n";
         }
         return TRUE;
     }
@@ -213,7 +189,7 @@ static BOOL DebugInterpreter(THREADID tid, CONTEXT *ctxt, const string &cmd, str
         {
             PIN_RemoveInstrumentation();
             EnableInstrumentation = false;
-            *result = "Stack tracing disabled.\n";
+            *result               = "Stack tracing disabled.\n";
         }
         return TRUE;
     }
@@ -225,19 +201,19 @@ static BOOL DebugInterpreter(THREADID tid, CONTEXT *ctxt, const string &cmd, str
             EnableInstrumentation = true;
         }
         BreakOnNewMax = true;
-        BreakOnSize = 0;
-        *result = "Will break when thread reaches new stack usage max.\n";
+        BreakOnSize   = 0;
+        *result       = "Will break when thread reaches new stack usage max.\n";
         return TRUE;
     }
     else if (line == "stackbreak off")
     {
         BreakOnNewMax = false;
-        BreakOnSize = 0;
+        BreakOnSize   = 0;
         return TRUE;
     }
     else if (line.find("stackbreak ") == 0)
     {
-        std::istringstream is(&line.c_str()[sizeof("stackbreak ")-1]);
+        std::istringstream is(&line.c_str()[sizeof("stackbreak ") - 1]);
         size_t size;
         is >> size;
         if (!is)
@@ -251,25 +227,24 @@ static BOOL DebugInterpreter(THREADID tid, CONTEXT *ctxt, const string &cmd, str
             EnableInstrumentation = true;
         }
         BreakOnNewMax = false;
-        BreakOnSize = size;
+        BreakOnSize   = size;
         tinfo->_os.str("");
         tinfo->_os << "Will break when thread uses more than " << size << " bytes of stack.\n";
         *result = tinfo->_os.str();
         return TRUE;
     }
 
-    return FALSE;   /* Unknown command */
+    return FALSE; /* Unknown command */
 }
 
-
-static VOID OnThreadStart(THREADID tid, CONTEXT *ctxt, INT32, VOID *)
+static VOID OnThreadStart(THREADID tid, CONTEXT* ctxt, INT32, VOID*)
 {
-    TINFO *tinfo = new TINFO(PIN_GetContextReg(ctxt, REG_STACK_PTR));
+    TINFO* tinfo = new TINFO(PIN_GetContextReg(ctxt, REG_STACK_PTR));
     ThreadInfos.insert(std::make_pair(tid, tinfo));
-    PIN_SetContextReg(ctxt, RegTinfo, reinterpret_cast<ADDRINT>(tinfo));
+    PIN_SetContextReg(ctxt, RegTinfo, reinterpret_cast< ADDRINT >(tinfo));
 }
 
-static VOID OnThreadEnd(THREADID tid, const CONTEXT *ctxt, INT32, VOID *)
+static VOID OnThreadEnd(THREADID tid, const CONTEXT* ctxt, INT32, VOID*)
 {
     TINFO_MAP::iterator it = ThreadInfos.find(tid);
     if (it != ThreadInfos.end())
@@ -279,28 +254,33 @@ static VOID OnThreadEnd(THREADID tid, const CONTEXT *ctxt, INT32, VOID *)
     }
 }
 
-
-static VOID Instruction(INS ins, VOID *)
+static VOID Instruction(INS ins, VOID*)
 {
-    if (!EnableInstrumentation)
-        return;
+    if (!EnableInstrumentation) return;
 
     if (INS_RegWContain(ins, REG_STACK_PTR))
     {
-        IPOINT where = IPOINT_AFTER;
-        if (!INS_HasFallThrough(ins))
-            where = IPOINT_TAKEN_BRANCH;
+        if (INS_IsSysenter(ins)) return; // no need to instrument system calls
 
-        INS_InsertIfCall(ins, where, (AFUNPTR)OnStackChangeIf, IARG_REG_VALUE, REG_STACK_PTR,
-            IARG_REG_VALUE, RegTinfo, IARG_END);
+        IPOINT where = IPOINT_AFTER;
+        if (!INS_IsValidForIpointAfter(ins))
+        {
+            if (INS_IsValidForIpointTakenBranch(ins))
+            {
+                where = IPOINT_TAKEN_BRANCH;
+            }
+            else
+            {
+                return;
+            }
+        }
+        INS_InsertIfCall(ins, where, (AFUNPTR)OnStackChangeIf, IARG_REG_VALUE, REG_STACK_PTR, IARG_REG_VALUE, RegTinfo, IARG_END);
 
         // We use IARG_CONST_CONTEXT here instead of IARG_CONTEXT because it is faster.
         //
-        INS_InsertThenCall(ins, where, (AFUNPTR)DoBreakpoint, 
-            IARG_CONST_CONTEXT, IARG_THREAD_ID, IARG_END);
+        INS_InsertThenCall(ins, where, (AFUNPTR)DoBreakpoint, IARG_CONST_CONTEXT, IARG_THREAD_ID, IARG_END);
     }
 }
-
 
 /*
  * Analysis routine called after each instruction that modifies the stack pointer.
@@ -312,29 +292,24 @@ static VOID Instruction(INS ins, VOID *)
  */
 static ADDRINT OnStackChangeIf(ADDRINT sp, ADDRINT addrInfo)
 {
-    TINFO *tinfo = reinterpret_cast<TINFO *>(addrInfo);
+    TINFO* tinfo = reinterpret_cast< TINFO* >(addrInfo);
 
     // The stack pointer may go above the base slightly.  (For example, the application's dynamic
     // loader does this briefly during start-up.)
     //
-    if (sp > tinfo->_stackBase)
-        return 0;
+    if (sp > tinfo->_stackBase) return 0;
 
     // Keep track of the maximum stack usage.
     //
     size_t size = tinfo->_stackBase - sp;
-    if (size > tinfo->_max)
-        tinfo->_max = size;
+    if (size > tinfo->_max) tinfo->_max = size;
 
     // See if we need to trigger a breakpoint.
     //
-    if (BreakOnNewMax && size > tinfo->_maxReported)
-        return 1;
-    if (BreakOnSize && size >= BreakOnSize)
-        return 1;
+    if (BreakOnNewMax && size > tinfo->_maxReported) return 1;
+    if (BreakOnSize && size >= BreakOnSize) return 1;
     return 0;
 }
-
 
 /*
  * Analysis routine called if we should stop at a breakpoint.
@@ -342,17 +317,16 @@ static ADDRINT OnStackChangeIf(ADDRINT sp, ADDRINT addrInfo)
  *  ctxt[in,out]    Application register state immediately after the instruction that change $SP.
  *  tid[in]         Thread ID for thread that triggers the breakpoint.
  */
-static VOID DoBreakpoint(const CONTEXT *ctxt, THREADID tid)
+static VOID DoBreakpoint(const CONTEXT* ctxt, THREADID tid)
 {
-    TINFO *tinfo = reinterpret_cast<TINFO *>(PIN_GetContextReg(ctxt, RegTinfo));
+    TINFO* tinfo = reinterpret_cast< TINFO* >(PIN_GetContextReg(ctxt, RegTinfo));
 
     // Keep track of the maximum reported stack usage for "stackbreak newmax".
     //
     size_t size = tinfo->_stackBase - PIN_GetContextReg(ctxt, REG_STACK_PTR);
-    if (size > tinfo->_maxReported)
-        tinfo->_maxReported = size;
+    if (size > tinfo->_maxReported) tinfo->_maxReported = size;
 
-    ConnectDebugger();  // Ask the user to connect a debugger, if it is not already connected.
+    ConnectDebugger(); // Ask the user to connect a debugger, if it is not already connected.
 
     // Construct a string that the debugger will print when it stops.  If a debugger is
     // not connected, no breakpoint is triggered and execution resumes immediately.
@@ -362,33 +336,33 @@ static VOID DoBreakpoint(const CONTEXT *ctxt, THREADID tid)
     PIN_ApplicationBreakpoint(ctxt, tid, FALSE, tinfo->_os.str());
 }
 
-
 /*
  * If a debugger is not already connected, ask the user to connect one now.  Upon
  * return, a debugger may or may not be connected.
  */
 static void ConnectDebugger()
 {
-    if (PIN_GetDebugStatus() != DEBUG_STATUS_UNCONNECTED)
-        return;
+    if (PIN_GetDebugStatus() != DEBUG_STATUS_UNCONNECTED) return;
 
     DEBUG_CONNECTION_INFO info;
-    if (!PIN_GetDebugConnectionInfo(&info) || info._type != DEBUG_CONNECTION_TYPE_TCP_SERVER)
-        return;
+    if (!PIN_GetDebugConnectionInfo(&info) || info._type != DEBUG_CONNECTION_TYPE_TCP_SERVER) return;
 
     *Output << "Triggered stack-limit breakpoint.\n";
+#if defined(TARGET_MAC)
+    *Output << "Start LLDB and enter this command:\n";
+    *Output << "  gdb-remote " << std::dec << info._tcpServer._tcpPort << "\n";
+#else
     *Output << "Start GDB and enter this command:\n";
     *Output << "  target remote :" << std::dec << info._tcpServer._tcpPort << "\n";
+#endif
     *Output << std::flush;
 
-    if (PIN_WaitForDebuggerToConnect(1000*KnobTimeout.Value()))
-        return;
+    if (PIN_WaitForDebuggerToConnect(1000 * KnobTimeout.Value())) return;
 
     *Output << "No debugger attached after " << KnobTimeout.Value() << " seconds.\n";
     *Output << "Resuming application without stopping.\n";
     *Output << std::flush;
 }
-
 
 /*
  * Trim whitespace from a line of text.  Leading and trailing whitespace is removed.
@@ -398,24 +372,23 @@ static void ConnectDebugger()
  *
  * Returns: A string with the whitespace trimmed.
  */
-static std::string TrimWhitespace(const std::string &inLine)
+static std::string TrimWhitespace(const std::string& inLine)
 {
     std::string outLine = inLine;
 
     bool skipNextSpace = true;
-    for (std::string::iterator it = outLine.begin();  it != outLine.end();  ++it)
+    for (std::string::iterator it = outLine.begin(); it != outLine.end(); ++it)
     {
         if (std::isspace(*it))
         {
             if (skipNextSpace)
             {
                 it = outLine.erase(it);
-                if (it == outLine.end())
-                    break;
+                if (it == outLine.end()) break;
             }
             else
             {
-                *it = ' ';
+                *it           = ' ';
                 skipNextSpace = true;
             }
         }
@@ -427,8 +400,7 @@ static std::string TrimWhitespace(const std::string &inLine)
     if (!outLine.empty())
     {
         std::string::reverse_iterator it = outLine.rbegin();
-        if (std::isspace(*it))
-            outLine.erase(outLine.size()-1);
+        if (std::isspace(*it)) outLine.erase(outLine.size() - 1);
     }
     return outLine;
 }

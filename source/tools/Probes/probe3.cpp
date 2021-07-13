@@ -1,40 +1,14 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
-
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
-
-/* ===================================================================== */
 /*
-  @ORIGINAL_AUTHOR: Gail Lyons
-*/
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-/* ===================================================================== */
 /*! @file
  */
 
@@ -42,8 +16,14 @@ END_LEGAL */
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
-
-using namespace std;
+#include "tool_macros.h"
+using std::cerr;
+using std::cout;
+using std::endl;
+using std::hex;
+using std::ios;
+using std::ofstream;
+using std::string;
 
 /* ===================================================================== */
 /* Global Variables */
@@ -57,28 +37,25 @@ static void (*pf_nd)();
 /* Commandline Switches */
 /* ===================================================================== */
 
-KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
-    "o", "probe3.outfile", "specify file name");
+KNOB< string > KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool", "o", "probe3.outfile", "specify file name");
 
 /* ===================================================================== */
 
 INT32 Usage()
 {
-    cerr <<
-        "This pin tool tests probe replacement.\n"
-        "\n";
+    cerr << "This pin tool tests probe replacement.\n"
+            "\n";
     cerr << KNOB_BASE::StringKnobSummary();
     cerr << endl;
     return -1;
 }
-
 
 void Call_Function()
 {
     if (pf_dn)
     {
         (*pf_dn)();
-        
+
         TraceFile << "Doing nothing." << endl;
     }
 }
@@ -88,7 +65,7 @@ void Nothing_Doing()
     if (pf_nd)
     {
         (*pf_nd)();
-        
+
         TraceFile << "Nothing doing." << endl;
     }
 }
@@ -96,48 +73,48 @@ void Nothing_Doing()
 /* ===================================================================== */
 // Called every time a new image is loaded
 // Look for routines that we want to probe
-VOID ImageLoad(IMG img, VOID *v)
+VOID ImageLoad(IMG img, VOID* v)
 {
-    cout << "Processing " << IMG_Name( img ) << endl;
-    
-    RTN rtn = RTN_FindByName(img, "call_function");
+    cout << "Processing " << IMG_Name(img) << endl;
+
+    RTN rtn = RTN_FindByName(img, C_MANGLE("call_function"));
     if (RTN_Valid(rtn))
     {
-        if ( ! RTN_IsSafeForProbedReplacement( rtn ) )
+        if (!RTN_IsSafeForProbedReplacement(rtn))
         {
             TraceFile << "Cannot replace " << RTN_Name(rtn) << " in " << IMG_Name(img) << endl;
             exit(1);
         }
 
-        pf_dn = (void (*)())RTN_ReplaceProbed( rtn, AFUNPTR( Call_Function ) );
+        pf_dn = (void (*)())RTN_ReplaceProbed(rtn, AFUNPTR(Call_Function));
 
         TraceFile << "Inserted probe for call_function:" << IMG_Name(img) << endl;
     }
 
-    rtn = RTN_FindByName(img, "nothing_doing");
+    rtn = RTN_FindByName(img, C_MANGLE("nothing_doing"));
     if (RTN_Valid(rtn))
     {
-        if ( ! RTN_IsSafeForProbedReplacement( rtn ) )
+        if (!RTN_IsSafeForProbedReplacement(rtn))
         {
             TraceFile << "Cannot replace " << RTN_Name(rtn) << " in " << IMG_Name(img) << endl;
             exit(1);
         }
 
-        pf_nd = (void (*)())RTN_ReplaceProbed( rtn, AFUNPTR( Nothing_Doing ) );
+        pf_nd = (void (*)())RTN_ReplaceProbed(rtn, AFUNPTR(Nothing_Doing));
 
         TraceFile << "Inserted probe for nothing_doing:" << IMG_Name(img) << endl;
     }
 
-    cout << "Completed " << IMG_Name( img ) << endl;
+    cout << "Completed " << IMG_Name(img) << endl;
 }
 
 /* ===================================================================== */
 
-int main(int argc, CHAR *argv[])
+int main(int argc, CHAR* argv[])
 {
     PIN_InitSymbols();
 
-    if( PIN_Init(argc,argv) )
+    if (PIN_Init(argc, argv))
     {
         return Usage();
     }
@@ -147,9 +124,9 @@ int main(int argc, CHAR *argv[])
     TraceFile.setf(ios::showbase);
 
     IMG_AddInstrumentFunction(ImageLoad, 0);
-    
+
     PIN_StartProgramProbed();
-    
+
     return 0;
 }
 

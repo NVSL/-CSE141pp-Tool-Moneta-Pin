@@ -1,33 +1,14 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 #include <assert.h>
 #include <stdio.h>
 #include <dlfcn.h>
@@ -38,20 +19,12 @@ END_LEGAL */
 #include <sys/wait.h>
 #include <sched.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string>
 #include <list>
-#include <sys/syscall.h>
-
-
-using namespace std;
-
-# define TLS_GET_GS_REG() \
-  ({ int __seg; __asm ("movw %%gs, %w0" : "=q" (__seg)); __seg & 0xffff; })
-
-pid_t GetTid()
-{
-     return syscall(__NR_gettid);
-}
+#include "../Utils/threadlib.h"
+using std::list;
+using std::string;
 
 volatile unsigned int unblockedUsr1Tid = 0;
 volatile unsigned int unblockedUsr2Tid = 0;
@@ -63,8 +36,6 @@ void SigUsrHandler(int sig)
     static bool usr1Tested = false;
     static bool usr2Tested = false;
 
-    //fprintf(stderr, "The gs val in sig handler is 0x%x\n", TLS_GET_GS_REG());
-    
     if (sig == SIGUSR1)
     {
         if (unblockedUsr1Tid == GetTid())
@@ -72,9 +43,8 @@ void SigUsrHandler(int sig)
             usr1Tested = true;
         }
         else
-        {            
-            fprintf(stderr, "The signal mask is incorrect, SIGUSR1 is caught by %d, expected %d\n",
-             GetTid(), unblockedUsr1Tid);
+        {
+            fprintf(stderr, "The signal mask is incorrect, SIGUSR1 is caught by %d, expected %d\n", GetTid(), unblockedUsr1Tid);
             exit(-1);
         }
     }
@@ -86,8 +56,7 @@ void SigUsrHandler(int sig)
         }
         else
         {
-            fprintf(stderr, "The signal mask is incorrect, SIGUSR2 is caught by %d, expected %d\n",
-             GetTid(), unblockedUsr2Tid);
+            fprintf(stderr, "The signal mask is incorrect, SIGUSR2 is caught by %d, expected %d\n", GetTid(), unblockedUsr2Tid);
             exit(-1);
         }
     }
@@ -99,7 +68,6 @@ void SigUsrHandler(int sig)
     pthread_mutex_unlock(&mutex);
 }
 
-
 int a[100000];
 int n = 10;
 sigset_t sigSet;
@@ -108,7 +76,7 @@ void BlockSignal(int sigNo)
 {
     sigset_t mask;
     sigemptyset(&mask);
-    sigaddset(&mask, sigNo);   
+    sigaddset(&mask, sigNo);
     sigprocmask(SIG_BLOCK, &mask, 0);
 }
 
@@ -117,19 +85,19 @@ void UnblockSignal(int sigNo)
     sigset_t mask;
     sigemptyset(&mask);
     sigaddset(&mask, sigNo);
-    sigprocmask(SIG_UNBLOCK, &mask, 0);
+    pthread_sigmask(SIG_UNBLOCK, &mask, 0);
 }
 void UnblockAllSignals()
 {
-     sigset_t mask;
-     sigemptyset(&mask);
-     sigprocmask(SIG_SETMASK, &mask, 0);
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigprocmask(SIG_SETMASK, &mask, 0);
 }
 
-void * ThreadEndlessLoopFunc(void * arg)
+void* ThreadEndlessLoopFunc(void* arg)
 {
-    unsigned int thread_no = *(unsigned int *)&arg;
-    
+    unsigned int thread_no = *(unsigned int*)&arg;
+
     if (thread_no == 1)
     {
         UnblockSignal(SIGUSR1);
@@ -140,12 +108,12 @@ void * ThreadEndlessLoopFunc(void * arg)
         UnblockSignal(SIGUSR2);
         unblockedUsr2Tid = GetTid();
     }
-    
+
     int x = 0;
-    while (1) 
+    while (1)
     {
         x++;
-        if (x > 10) 
+        if (x > 10)
         {
             x = 0;
         }
@@ -154,37 +122,40 @@ void * ThreadEndlessLoopFunc(void * arg)
     return 0;
 }
 
-#define DECSTR(buf, num) { buf = (char *)malloc(10); sprintf(buf, "%d", num); }
+#define DECSTR(buf, num)         \
+    {                            \
+        buf = (char*)malloc(10); \
+        sprintf(buf, "%d", num); \
+    }
 
-inline void PrintArguments(char **inArgv)
+inline void PrintArguments(char** inArgv)
 {
     fprintf(stderr, "Going to run: ");
-    for(unsigned int i=0; inArgv[i] != 0; ++i)
+    for (unsigned int i = 0; inArgv[i] != 0; ++i)
     {
         fprintf(stderr, "%s ", inArgv[i]);
     }
     fprintf(stderr, "\n");
 }
 
-
 /* AttachAndInstrument()
  * a special thread routine that runs $PIN
  */
-void AttachAndInstrument(list <string > * pinArgs)
+void AttachAndInstrument(list< string >* pinArgs)
 {
-    list <string >::iterator pinArgIt = pinArgs->begin();
+    list< string >::iterator pinArgIt = pinArgs->begin();
 
     string pinBinary = *pinArgIt;
     pinArgIt++;
 
     pid_t parent_pid = getpid();
-    
+
     pid_t child = fork();
 
-    if (child) 
+    if (child)
     {
         // inside parent
-        
+
         return;
     }
     else
@@ -193,20 +164,20 @@ void AttachAndInstrument(list <string > * pinArgs)
 
         UnblockAllSignals();
 
-        char **inArgv = new char*[pinArgs->size()+10];
+        char** inArgv = new char*[pinArgs->size() + 10];
 
         unsigned int idx = 0;
-        inArgv[idx++] = (char *)pinBinary.c_str(); 
-        inArgv[idx++] = (char*)"-pid"; 
-        inArgv[idx] = (char *)malloc(10);
+        inArgv[idx++]    = (char*)pinBinary.c_str();
+        inArgv[idx++]    = (char*)"-pid";
+        inArgv[idx]      = (char*)malloc(10);
         sprintf(inArgv[idx++], "%d", parent_pid);
 
         for (; pinArgIt != pinArgs->end(); pinArgIt++)
         {
-            inArgv[idx++]= (char *)pinArgIt->c_str();
+            inArgv[idx++] = (char*)pinArgIt->c_str();
         }
         inArgv[idx] = 0;
-        
+
         PrintArguments(inArgv);
 
         execvp(inArgv[0], inArgv);
@@ -220,18 +191,17 @@ void AttachAndInstrument(list <string > * pinArgs)
  */
 void SendSignals(int signo)
 {
-
     pid_t parentPid = getpid();
-    pid_t pid = fork();
-    if ( pid != 0 ) // child
+    pid_t pid       = fork();
+    if (pid != 0) // child
     {
         return;
     }
 
-    char **inArgv = new char*[15];
+    char** inArgv = new char*[15];
 
     unsigned int idx = 0;
-    inArgv[idx++] = (char *)"./send_signals.sh"; 
+    inArgv[idx++]    = (char*)"./send_signals.sh";
     DECSTR(inArgv[idx], parentPid);
     idx++;
     DECSTR(inArgv[idx], signo);
@@ -242,14 +212,12 @@ void SendSignals(int signo)
 
     execvp(inArgv[0], inArgv);
     fprintf(stderr, "ERROR: execv %s failed\n", inArgv[0]);
-
 }
 
-
-void ParseCommandLine(int argc, char *argv[], list < string>* pinArgs)
+void ParseCommandLine(int argc, char* argv[], list< string >* pinArgs)
 {
     string pinBinary;
-    for (unsigned int i=1; i<argc; i++)
+    for (unsigned int i = 1; i < argc; i++)
     {
         string arg = string(argv[i]);
         if (arg == "-pin")
@@ -272,21 +240,17 @@ void ParseCommandLine(int argc, char *argv[], list < string>* pinArgs)
 #define NUM_OF_THREADS 4
 pthread_t threads[NUM_OF_THREADS];
 
-extern "C" int ThreadsReady(unsigned int numOfThreads)
-{
-    return 0;
-}
+extern "C" int ThreadsReady(unsigned int numOfThreads) { return 0; }
 
-
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    list <string> pinArgs;
+    list< string > pinArgs;
     ParseCommandLine(argc, argv, &pinArgs);
-    
+
     // Set the same signal handler for USR1 and USR2 signals
     signal(SIGUSR1, SigUsrHandler);
     signal(SIGUSR2, SigUsrHandler);
-    
+
     // initialize a mutex that will be used by threads
     pthread_mutex_init(&mutex, 0);
 
@@ -294,32 +258,30 @@ int main(int argc, char *argv[])
     BlockSignal(SIGUSR1);
     BlockSignal(SIGUSR2);
     /*****************/
-    
+
     // launch threads
-    for (unsigned int i = 0; i < NUM_OF_THREADS; i++)
+    for (intptr_t i = 0; i < NUM_OF_THREADS; i++)
     {
-        pthread_create(&threads[i], 0, ThreadEndlessLoopFunc, (void *)i);
+        pthread_create(&threads[i], 0, ThreadEndlessLoopFunc, (void*)i);
     }
 
-
-    // Attach Pin to the running process    
+    // Attach Pin to the running process
     AttachAndInstrument(&pinArgs);
-    
-    // Give enough time for all threads to get started 
-    while (!ThreadsReady(NUM_OF_THREADS+1) || !unblockedUsr1Tid || !unblockedUsr2Tid)
+
+    // Give enough time for all threads to get started
+    while (!ThreadsReady(NUM_OF_THREADS + 1) || !unblockedUsr1Tid || !unblockedUsr2Tid)
     {
         sched_yield();
-    }        
+    }
 
     SendSignals(SIGUSR1);
     SendSignals(SIGUSR2);
 
     // Signals should kill this application
-    while(1)
+    while (1)
     {
         sched_yield();
     }
 
     return 0;
 }
-

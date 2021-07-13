@@ -1,2 +1,3 @@
+#!/bin/sh
 export var=SUCCESS
-./2.sh
+$SHELL ./2.sh

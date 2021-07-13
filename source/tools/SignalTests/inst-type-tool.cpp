@@ -1,33 +1,14 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * This tool verifies that Pin can deliver signals on traces with
  * different types of instrumentation calls.  This tool must be run
@@ -44,10 +25,10 @@ END_LEGAL */
 // IARG_CONTEXT is not allowed in an "if" analysis call, so we use
 // IARG_REG_REFERENCE, which should also force usage of a bridge.
 //
-#define IARG_BRIDGE      IARG_CONTEXT
-#define IARG_BRIDGE_IF   IARG_REG_REFERENCE, REG_STACK_PTR
+#define IARG_BRIDGE IARG_CONTEXT
+#define IARG_BRIDGE_IF IARG_REG_REFERENCE, REG_STACK_PTR
 
-static VOID OnRoutine(RTN, VOID *);
+static VOID OnRoutine(RTN, VOID*);
 static VOID InsertInline(RTN rtn);
 static VOID InsertNoBridge(RTN rtn);
 static VOID InsertBridge(RTN rtn);
@@ -70,22 +51,21 @@ static VOID ThenInline();
 static VOID ThenNoBridge();
 static VOID ThenBridge();
 static VOID ForceOutOfLine();
-static VOID OnExit(INT32, VOID *);
+static VOID OnExit(INT32, VOID*);
 
-static BOOL GotInline = FALSE;
-static BOOL GotNoBridge = FALSE;
-static BOOL GotBridge = FALSE;
-static BOOL GotIfInline = FALSE;
-static BOOL GotIfNoBridge = FALSE;
-static BOOL GotIfBridge = FALSE;
-static BOOL GotThenInline = FALSE;
+static BOOL GotInline       = FALSE;
+static BOOL GotNoBridge     = FALSE;
+static BOOL GotBridge       = FALSE;
+static BOOL GotIfInline     = FALSE;
+static BOOL GotIfNoBridge   = FALSE;
+static BOOL GotIfBridge     = FALSE;
+static BOOL GotThenInline   = FALSE;
 static BOOL GotThenNoBridge = FALSE;
-static BOOL GotThenBridge = FALSE;
+static BOOL GotThenBridge   = FALSE;
 
 typedef VOID (*FUN)();
 
-
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
     PIN_Init(argc, argv);
     PIN_InitSymbols();
@@ -98,60 +78,36 @@ int main(int argc, char * argv[])
 }
 
 #ifdef TARGET_MAC
-static VOID OnRoutine(RTN rtn, VOID *)
+static VOID OnRoutine(RTN rtn, VOID*)
 {
-    if (RTN_Name(rtn) == "_DoInline" || RTN_Name(rtn) == "_DoAll")
-        InsertInline(rtn);
-    if (RTN_Name(rtn) == "_DoNoBridge" || RTN_Name(rtn) == "_DoAll")
-        InsertNoBridge(rtn);
-    if (RTN_Name(rtn) == "_DoBridge" || RTN_Name(rtn) == "_DoAll")
-        InsertBridge(rtn);
-    if (RTN_Name(rtn) == "_DoIfInlineThenInline" || RTN_Name(rtn) == "_DoAll")
-        InsertIfInlineThenInline(rtn);
-    if (RTN_Name(rtn) == "_DoIfInlineThenNoBridge" || RTN_Name(rtn) == "_DoAll")
-        InsertIfInlineThenNoBridge(rtn);
-    if (RTN_Name(rtn) == "_DoIfInlineThenBridge" || RTN_Name(rtn) == "_DoAll")
-        InsertIfInlineThenBridge(rtn);
-    if (RTN_Name(rtn) == "_DoIfNoBridgeThenInline" || RTN_Name(rtn) == "_DoAll")
-        InsertIfNoBridgeThenInline(rtn);
-    if (RTN_Name(rtn) == "_DoIfNoBridgeThenNoBridge" || RTN_Name(rtn) == "_DoAll")
-        InsertIfNoBridgeThenNoBridge(rtn);
-    if (RTN_Name(rtn) == "_DoIfNoBridgeThenBridge" || RTN_Name(rtn) == "_DoAll")
-        InsertIfNoBridgeThenBridge(rtn);
-    if (RTN_Name(rtn) == "_DoIfBridgeThenInline" || RTN_Name(rtn) == "_DoAll")
-        InsertIfBridgeThenInline(rtn);
-    if (RTN_Name(rtn) == "_DoIfBridgeThenNoBridge" || RTN_Name(rtn) == "_DoAll")
-        InsertIfBridgeThenNoBridge(rtn);
-    if (RTN_Name(rtn) == "_DoIfBridgeThenBridge" || RTN_Name(rtn) == "_DoAll")
-        InsertIfBridgeThenBridge(rtn);
+    if (RTN_Name(rtn) == "_DoInline" || RTN_Name(rtn) == "_DoAll") InsertInline(rtn);
+    if (RTN_Name(rtn) == "_DoNoBridge" || RTN_Name(rtn) == "_DoAll") InsertNoBridge(rtn);
+    if (RTN_Name(rtn) == "_DoBridge" || RTN_Name(rtn) == "_DoAll") InsertBridge(rtn);
+    if (RTN_Name(rtn) == "_DoIfInlineThenInline" || RTN_Name(rtn) == "_DoAll") InsertIfInlineThenInline(rtn);
+    if (RTN_Name(rtn) == "_DoIfInlineThenNoBridge" || RTN_Name(rtn) == "_DoAll") InsertIfInlineThenNoBridge(rtn);
+    if (RTN_Name(rtn) == "_DoIfInlineThenBridge" || RTN_Name(rtn) == "_DoAll") InsertIfInlineThenBridge(rtn);
+    if (RTN_Name(rtn) == "_DoIfNoBridgeThenInline" || RTN_Name(rtn) == "_DoAll") InsertIfNoBridgeThenInline(rtn);
+    if (RTN_Name(rtn) == "_DoIfNoBridgeThenNoBridge" || RTN_Name(rtn) == "_DoAll") InsertIfNoBridgeThenNoBridge(rtn);
+    if (RTN_Name(rtn) == "_DoIfNoBridgeThenBridge" || RTN_Name(rtn) == "_DoAll") InsertIfNoBridgeThenBridge(rtn);
+    if (RTN_Name(rtn) == "_DoIfBridgeThenInline" || RTN_Name(rtn) == "_DoAll") InsertIfBridgeThenInline(rtn);
+    if (RTN_Name(rtn) == "_DoIfBridgeThenNoBridge" || RTN_Name(rtn) == "_DoAll") InsertIfBridgeThenNoBridge(rtn);
+    if (RTN_Name(rtn) == "_DoIfBridgeThenBridge" || RTN_Name(rtn) == "_DoAll") InsertIfBridgeThenBridge(rtn);
 }
 #else
-static VOID OnRoutine(RTN rtn, VOID *)
+static VOID OnRoutine(RTN rtn, VOID*)
 {
-    if (RTN_Name(rtn) == "DoInline" || RTN_Name(rtn) == "DoAll")
-        InsertInline(rtn);
-    if (RTN_Name(rtn) == "DoNoBridge" || RTN_Name(rtn) == "DoAll")
-        InsertNoBridge(rtn);
-    if (RTN_Name(rtn) == "DoBridge" || RTN_Name(rtn) == "DoAll")
-        InsertBridge(rtn);
-    if (RTN_Name(rtn) == "DoIfInlineThenInline" || RTN_Name(rtn) == "DoAll")
-        InsertIfInlineThenInline(rtn);
-    if (RTN_Name(rtn) == "DoIfInlineThenNoBridge" || RTN_Name(rtn) == "DoAll")
-        InsertIfInlineThenNoBridge(rtn);
-    if (RTN_Name(rtn) == "DoIfInlineThenBridge" || RTN_Name(rtn) == "DoAll")
-        InsertIfInlineThenBridge(rtn);
-    if (RTN_Name(rtn) == "DoIfNoBridgeThenInline" || RTN_Name(rtn) == "DoAll")
-        InsertIfNoBridgeThenInline(rtn);
-    if (RTN_Name(rtn) == "DoIfNoBridgeThenNoBridge" || RTN_Name(rtn) == "DoAll")
-        InsertIfNoBridgeThenNoBridge(rtn);
-    if (RTN_Name(rtn) == "DoIfNoBridgeThenBridge" || RTN_Name(rtn) == "DoAll")
-        InsertIfNoBridgeThenBridge(rtn);
-    if (RTN_Name(rtn) == "DoIfBridgeThenInline" || RTN_Name(rtn) == "DoAll")
-        InsertIfBridgeThenInline(rtn);
-    if (RTN_Name(rtn) == "DoIfBridgeThenNoBridge" || RTN_Name(rtn) == "DoAll")
-        InsertIfBridgeThenNoBridge(rtn);
-    if (RTN_Name(rtn) == "DoIfBridgeThenBridge" || RTN_Name(rtn) == "DoAll")
-        InsertIfBridgeThenBridge(rtn);
+    if (RTN_Name(rtn) == "DoInline" || RTN_Name(rtn) == "DoAll") InsertInline(rtn);
+    if (RTN_Name(rtn) == "DoNoBridge" || RTN_Name(rtn) == "DoAll") InsertNoBridge(rtn);
+    if (RTN_Name(rtn) == "DoBridge" || RTN_Name(rtn) == "DoAll") InsertBridge(rtn);
+    if (RTN_Name(rtn) == "DoIfInlineThenInline" || RTN_Name(rtn) == "DoAll") InsertIfInlineThenInline(rtn);
+    if (RTN_Name(rtn) == "DoIfInlineThenNoBridge" || RTN_Name(rtn) == "DoAll") InsertIfInlineThenNoBridge(rtn);
+    if (RTN_Name(rtn) == "DoIfInlineThenBridge" || RTN_Name(rtn) == "DoAll") InsertIfInlineThenBridge(rtn);
+    if (RTN_Name(rtn) == "DoIfNoBridgeThenInline" || RTN_Name(rtn) == "DoAll") InsertIfNoBridgeThenInline(rtn);
+    if (RTN_Name(rtn) == "DoIfNoBridgeThenNoBridge" || RTN_Name(rtn) == "DoAll") InsertIfNoBridgeThenNoBridge(rtn);
+    if (RTN_Name(rtn) == "DoIfNoBridgeThenBridge" || RTN_Name(rtn) == "DoAll") InsertIfNoBridgeThenBridge(rtn);
+    if (RTN_Name(rtn) == "DoIfBridgeThenInline" || RTN_Name(rtn) == "DoAll") InsertIfBridgeThenInline(rtn);
+    if (RTN_Name(rtn) == "DoIfBridgeThenNoBridge" || RTN_Name(rtn) == "DoAll") InsertIfBridgeThenNoBridge(rtn);
+    if (RTN_Name(rtn) == "DoIfBridgeThenBridge" || RTN_Name(rtn) == "DoAll") InsertIfBridgeThenBridge(rtn);
 }
 #endif
 
@@ -248,21 +204,18 @@ static VOID InsertIfBridgeThenBridge(RTN rtn)
     RTN_Close(rtn);
 }
 
-static VOID Inline()
-{
-    GotInline = TRUE;
-}
+static VOID Inline() { GotInline = TRUE; }
 
 static VOID NoBridge()
 {
-    GotNoBridge = TRUE;
+    GotNoBridge     = TRUE;
     volatile FUN fn = ForceOutOfLine;
     fn();
 }
 
 static VOID Bridge()
 {
-    GotBridge = TRUE;
+    GotBridge       = TRUE;
     volatile FUN fn = ForceOutOfLine;
     fn();
 }
@@ -275,7 +228,7 @@ static ADDRINT IfInline()
 
 static ADDRINT IfNoBridge()
 {
-    GotIfNoBridge = TRUE;
+    GotIfNoBridge   = TRUE;
     volatile FUN fn = ForceOutOfLine;
     fn();
     return 1;
@@ -283,16 +236,13 @@ static ADDRINT IfNoBridge()
 
 static ADDRINT IfBridge()
 {
-    GotIfBridge = TRUE;
+    GotIfBridge     = TRUE;
     volatile FUN fn = ForceOutOfLine;
     fn();
     return 1;
 }
 
-static VOID ThenInline()
-{
-    GotThenInline = TRUE;
-}
+static VOID ThenInline() { GotThenInline = TRUE; }
 
 static VOID ThenNoBridge()
 {
@@ -303,21 +253,17 @@ static VOID ThenNoBridge()
 
 static VOID ThenBridge()
 {
-    GotThenBridge = TRUE;
+    GotThenBridge   = TRUE;
     volatile FUN fn = ForceOutOfLine;
     fn();
 }
 
-static VOID ForceOutOfLine()
-{
-}
+static VOID ForceOutOfLine() {}
 
-
-static VOID OnExit(INT32, VOID *)
+static VOID OnExit(INT32, VOID*)
 {
-    if (!GotInline || !GotNoBridge || !GotBridge ||
-        !GotIfInline || !GotIfNoBridge || !GotIfBridge ||
-        !GotThenInline || !GotThenNoBridge || !GotThenBridge)
+    if (!GotInline || !GotNoBridge || !GotBridge || !GotIfInline || !GotIfNoBridge || !GotIfBridge || !GotThenInline ||
+        !GotThenNoBridge || !GotThenBridge)
     {
         std::cerr << "Analysis routine not exectued." << std::endl;
         std::exit(1);

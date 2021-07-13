@@ -1,126 +1,57 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 
 /*! @file
  *  Tool that tests the PIN_SafeCopy() function. 
  */
 
 #include "pin.H"
+#include <os-apis.h>
 #include <iostream>
 #include <fstream>
 #include <string.h>
-
-#if defined(TARGET_WINDOWS)
-namespace WINDOWS
-{
-#include <windows.h>
-}
-#else
 #include <unistd.h>
-#include <sys/mman.h>
-#endif
+using std::endl;
+using std::flush;
+using std::string;
 
 /* ================================================================== */
-// Global variables 
+// Global variables
 /* ================================================================== */
-KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE,         "pintool",
-                            "o", "safecopy.out", "specify output file name");
+KNOB< string > KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool", "o", "safecopy.out", "specify output file name");
 
 std::ofstream out;
 
-VOID * probeAddr = 0; // base address of a range overwritten by a probe 
+VOID* probeAddr = 0; // base address of a range overwritten by a probe
 
 /* ================================================================== */
 // Utilities
 /* ================================================================== */
-#if defined(TARGET_WINDOWS)
-
-size_t GetPageSize()
+VOID* MemAlloc(size_t size)
 {
-    WINDOWS::SYSTEM_INFO sysInfo;
-    WINDOWS::GetSystemInfo(&sysInfo);
-    return static_cast<size_t>(sysInfo.dwPageSize);
+    void* pageFrameStart = NULL;
+    OS_AllocateMemory(NATIVE_PID_CURRENT, OS_PAGE_PROTECTION_TYPE_READ | OS_PAGE_PROTECTION_TYPE_WRITE, size,
+                      OS_MEMORY_FLAGS_PRIVATE, &pageFrameStart);
+    return pageFrameStart;
 }
 
-VOID * MemAlloc(size_t size)
+BOOL MemProtect(VOID* addr, size_t size, BOOL enableAccess)
 {
-    return WINDOWS::VirtualAlloc(0, size, MEM_COMMIT, PAGE_READWRITE);
+    UINT prot = enableAccess ? (OS_PAGE_PROTECTION_TYPE_READ | OS_PAGE_PROTECTION_TYPE_WRITE) : OS_PAGE_PROTECTION_TYPE_NOACCESS;
+    OS_RETURN_CODE result = OS_ProtectMemory(NATIVE_PID_CURRENT, const_cast< void* >(addr), size, prot);
+    return OS_RETURN_CODE_IS_SUCCESS(result);
 }
 
-VOID MemFree(VOID * addr, size_t size)
-{
-    WINDOWS::VirtualFree(addr, 0, MEM_RELEASE);
-}
-
-BOOL MemProtect(VOID * addr, size_t size, BOOL enableAccess)
-{
-    WINDOWS::DWORD oldProtect;
-    return WINDOWS::VirtualProtect(addr, size, 
-                    (enableAccess? PAGE_READWRITE : PAGE_NOACCESS), &oldProtect);
-}
-
-#else
-
-size_t GetPageSize()
-{
-    return static_cast<size_t>(getpagesize());
-}
-
-VOID MemFree(VOID * addr, size_t size)
-{
-    munmap(addr, size);
-}
-
-BOOL MemProtect(VOID * addr, size_t size, BOOL enableAccess)
-{
-    
-    return (-1 != mprotect(addr, size, (enableAccess? (PROT_READ | PROT_WRITE) : PROT_NONE)));
-}
-
-VOID * MemAlloc(size_t size)
-{
-#if defined(TARGET_MAC) || defined(TARGET_BSD)
-    VOID * addr = mmap(0, size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
-#else
-    VOID * addr = mmap(0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
-#endif
-    if (addr != MAP_FAILED)
-    {
-        return addr;
-    }
-    return 0;
-}
-
-#endif
-
+VOID MemFree(VOID* addr, size_t size) { OS_FreeMemory(NATIVE_PID_CURRENT, addr, size); }
 
 /*!
  * Test the PIN_SafeCopy() function in the following scenarios:
@@ -130,28 +61,27 @@ VOID * MemAlloc(size_t size)
  */
 VOID SafeCopyTest()
 {
-    size_t pageSize = GetPageSize();
+    size_t pageSize = getpagesize();
 
-    CHAR * src = (CHAR *)MemAlloc(2*pageSize);
+    CHAR* src = (CHAR*)MemAlloc(2 * pageSize);
     ASSERTX(src != 0);
-    CHAR * srcBuf = src + 1; // +1 for testing unaligned access
+    CHAR* srcBuf = src + 1; // +1 for testing unaligned access
 
-
-    CHAR * dst = (CHAR *)MemAlloc(2*pageSize);
+    CHAR* dst = (CHAR*)MemAlloc(2 * pageSize);
     ASSERTX(dst != 0);
-    CHAR * dstBuf = dst + 1; // +1 for testing unaligned access
+    CHAR* dstBuf = dst + 1; // +1 for testing unaligned access
 
-    size_t bufSize = 2*pageSize - 1;
+    size_t bufSize     = 2 * pageSize - 1;
     size_t halfBufSize = pageSize - 1;
     size_t copySize;
 
     //A.
     for (unsigned int i = 0; i < bufSize; ++i)
     {
-        src[i] = i/256;
+        src[i] = i / 256;
         dst[i] = 0;
     }
-    copySize = PIN_SafeCopy(dstBuf, srcBuf, bufSize); 
+    copySize = PIN_SafeCopy(dstBuf, srcBuf, bufSize);
     ASSERT(((copySize == bufSize) && (memcmp(dstBuf, srcBuf, bufSize) == 0)), "SafeCopy (A) failed.\n");
     out << "SafeCopy (A): Entire buffer has been copied successfully." << endl << flush;
 
@@ -161,7 +91,7 @@ VOID SafeCopyTest()
         dst[i] = 0;
     }
     MemProtect(src + pageSize, pageSize, FALSE); // second half of src is inaccessible
-    copySize = PIN_SafeCopy(dstBuf, srcBuf, bufSize); 
+    copySize = PIN_SafeCopy(dstBuf, srcBuf, bufSize);
     ASSERT(((copySize == halfBufSize) && (memcmp(dstBuf, srcBuf, halfBufSize) == 0)), "SafeCopy (B) failed.\n");
 
     // Check to see that all accessible bytes near the end of the first page are copied successfully
@@ -171,20 +101,20 @@ VOID SafeCopyTest()
         {
             dstBuf[i] = 0;
         }
-        copySize = PIN_SafeCopy(dstBuf, src + pageSize - sz, pageSize); 
+        copySize = PIN_SafeCopy(dstBuf, src + pageSize - sz, pageSize);
         ASSERT(((copySize == sz) && (memcmp(dstBuf, src + pageSize - sz, sz) == 0)), "SafeCopy (B) failed.\n");
     }
 
-    out << "SafeCopy (B): Accessible part of the buffer has been copied successfully."  << endl << flush;
+    out << "SafeCopy (B): Accessible part of the buffer has been copied successfully." << endl << flush;
 
     //C.
     MemProtect(dst, pageSize, FALSE); // dst is inaccessible
-    copySize = PIN_SafeCopy(dstBuf, srcBuf, bufSize); 
+    copySize = PIN_SafeCopy(dstBuf, srcBuf, bufSize);
     ASSERT((copySize == 0), "SafeCopy (C) failed.\n");
-    out << "SafeCopy (C): Inaccessible buffer has not been copied."  << endl << flush;
+    out << "SafeCopy (C): Inaccessible buffer has not been copied." << endl << flush;
 
-    MemFree(src, 2*pageSize);
-    MemFree(dst, 2*pageSize);
+    MemFree(src, 2 * pageSize);
+    MemFree(dst, 2 * pageSize);
 }
 
 /*!
@@ -204,7 +134,7 @@ VOID SafeCopyTestInTrace()
 /*!
  * Test SafeCopy in the trace instrumentation callback
  */
-VOID Trace(TRACE trace, VOID *v)
+VOID Trace(TRACE trace, VOID* v)
 {
     static BOOL first = TRUE;
     if (first)
@@ -220,7 +150,7 @@ VOID Trace(TRACE trace, VOID *v)
     {
         out << "Test SafeCopy in a region overwritten by probe." << endl << flush;
         CHAR buffer[8];
-        size_t copySize = PIN_SafeCopy(buffer, probeAddr, sizeof(buffer)); 
+        size_t copySize = PIN_SafeCopy(buffer, probeAddr, sizeof(buffer));
         ASSERT((copySize == sizeof(buffer)), "SafeCopy failed in a region overwritten by probe.\n");
         ASSERT((memcmp(buffer, probeAddr, copySize) != 0), "Pin inserted probes are visible through SafeCopy.\n");
         probeAddr = 0;
@@ -230,14 +160,14 @@ VOID Trace(TRACE trace, VOID *v)
 /*!
  * Test SafeCopy in the image instrumentation callback
  */
-VOID ImageLoad(IMG img, VOID *v)
+VOID ImageLoad(IMG img, VOID* v)
 {
 #if defined(TARGET_WINDOWS)
     // Pin on Windows inserts a probe that intercepts APCs at KiApcUserDispatcher
     RTN rtn = RTN_FindByName(img, "KiUserApcDispatcher");
     if (RTN_Valid(rtn))
     {
-        probeAddr = (VOID *)RTN_Address(rtn);
+        probeAddr = (VOID*)RTN_Address(rtn);
     }
 #endif
 
@@ -250,21 +180,18 @@ VOID ImageLoad(IMG img, VOID *v)
     }
 }
 
-VOID Fini(INT32 code, VOID *v)
-{
-    out <<  "SafeCopy test completed." << endl << flush;
-}
+VOID Fini(INT32 code, VOID* v) { out << "SafeCopy test completed." << endl << flush; }
 
 /*!
  * The main procedure of the tool.
  */
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     PIN_InitSymbols();
-    PIN_Init(argc,argv);
+    PIN_Init(argc, argv);
 
     out.open(KnobOutputFile.Value().c_str());
-    
+
     // Register function to be called to instrument traces
     TRACE_AddInstrumentFunction(Trace, 0);
 
@@ -276,7 +203,7 @@ int main(int argc, char *argv[])
 
     // Start the program, never returns
     PIN_StartProgram();
-    
+
     return 0;
 }
 

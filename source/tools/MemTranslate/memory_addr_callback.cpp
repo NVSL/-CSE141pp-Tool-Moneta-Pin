@@ -1,60 +1,51 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 #include <iostream>
 #include <fstream>
 #include "pin.H"
-#include "pin_isa.H"
 #include "instlib.H"
+using std::hex;
+using std::ios;
+using std::ofstream;
 
 ofstream OutFile;
 
 // Counters
-static UINT64 icountMemRead = 0;
+static UINT64 icountMemRead  = 0;
 static UINT64 icountMemRead2 = 0;
 static UINT64 icountMemWrite = 0;
-static UINT64 icountMemOp = 0;
-static UINT64 icountMemCall = 0;
-static ADDRINT lastIp = 0;
-static ADDRINT lastReadAddr = 0;
+static UINT64 icountMemOp    = 0;
+static UINT64 icountMemCall  = 0;
+static ADDRINT lastIp        = 0;
+static ADDRINT lastReadAddr  = 0;
 static ADDRINT lastWriteAddr = 0;
 static const ADDRINT mask(~(16 - 1));
-static UINT64 errors = 0;
-static size_t lastBytes = 0;
-static BOOL lastIsPrefetch = 0;
-static BOOL lastIsRmw = 0;
-static BOOL lastIsAtomic = 0;
+static UINT64 errors              = 0;
+static size_t lastBytes           = 0;
+static BOOL lastIsPrefetch        = 0;
+static BOOL lastIsRmw             = 0;
+static BOOL lastIsAtomic          = 0;
+static volatile THREADID myThread = INVALID_THREADID;
 
-VOID PIN_FAST_ANALYSIS_CALL readXmmMemoryFunc(
-    ADDRINT memea_callback, UINT32 bytes, string *dis, ADDRINT ip)
+VOID ThreadStart(THREADID threadid, CONTEXT* ctxt, INT32 flags, VOID* v)
 {
+    if (INVALID_THREADID == myThread) myThread = threadid;
+}
+
+VOID PIN_FAST_ANALYSIS_CALL readXmmMemoryFunc(ADDRINT memea_callback, UINT32 bytes, string* dis, ADDRINT ip)
+{
+    // case of multithreading - we care just about the main thread
+    if (PIN_ThreadId() != myThread) return;
+
     // Check xmm size
     if (16 != lastBytes || bytes != lastBytes)
     {
@@ -63,43 +54,51 @@ VOID PIN_FAST_ANALYSIS_CALL readXmmMemoryFunc(
     }
 }
 
-VOID PIN_FAST_ANALYSIS_CALL verifyPrefetchFunc(
-    ADDRINT memea_callback, UINT32 bytes, string *dis, ADDRINT ip)
+VOID PIN_FAST_ANALYSIS_CALL verifyPrefetchFunc(ADDRINT memea_callback, UINT32 bytes, string* dis, ADDRINT ip)
 {
+    // case of multithreading - we care just about the main thread
+    if (PIN_ThreadId() != myThread) return;
+
     if (!lastIsPrefetch)
     {
-        OutFile << "Prefetch flag not set: "  << *dis << endl;
+        OutFile << "Prefetch flag not set: " << *dis << endl;
         errors++;
     }
 }
 
-VOID PIN_FAST_ANALYSIS_CALL verifyRmwFunc(
-    ADDRINT memea_callback, UINT32 bytes, string *dis, ADDRINT ip)
+VOID PIN_FAST_ANALYSIS_CALL verifyRmwFunc(ADDRINT memea_callback, UINT32 bytes, string* dis, ADDRINT ip)
 {
+    // case of multithreading - we care just about the main thread
+    if (PIN_ThreadId() != myThread) return;
+
     if (!lastIsRmw)
     {
-        OutFile << "RMW flag not set: "  << *dis << endl;
+        OutFile << "RMW flag not set: " << *dis << endl;
         errors++;
     }
 }
 
-VOID PIN_FAST_ANALYSIS_CALL verifyAtomicFunc(
-    ADDRINT memea_callback, UINT32 bytes, string *dis, ADDRINT ip)
+VOID PIN_FAST_ANALYSIS_CALL verifyAtomicFunc(ADDRINT memea_callback, UINT32 bytes, string* dis, ADDRINT ip)
 {
+    // case of multithreading - we care just about the main thread
+    if (PIN_ThreadId() != myThread) return;
+
     if (!lastIsAtomic)
     {
-        OutFile << "Atomic flag not set: "  << *dis << endl;
+        OutFile << "Atomic flag not set: " << *dis << endl;
         errors++;
     }
 }
 
-VOID PIN_FAST_ANALYSIS_CALL readMemoryFunc(
-    ADDRINT memea_orig,ADDRINT memea_callback,THREADID threadIndex, string *dis, ADDRINT ip)
+VOID PIN_FAST_ANALYSIS_CALL readMemoryFunc(ADDRINT memea_orig, ADDRINT memea_callback, THREADID threadIndex, string* dis,
+                                           ADDRINT ip)
 {
+    // case of multithreading - we care just about the main thread
+    if (PIN_ThreadId() != myThread) return;
 
     if (ip != lastIp)
     {
-        OutFile << "read analysis missing: "  << hex << ip << " " << *dis << endl;
+        OutFile << "read analysis missing: " << hex << ip << " " << *dis << endl;
         errors++;
     }
 
@@ -124,14 +123,16 @@ VOID PIN_FAST_ANALYSIS_CALL readMemoryFunc(
     icountMemRead++;
 }
 
-VOID PIN_FAST_ANALYSIS_CALL read2MemoryFunc(ADDRINT memea_orig,ADDRINT memea_callback,
-                                            ADDRINT memea2_orig,ADDRINT memea2_callback,
-                                            THREADID threadIndex, string *dis,
-                                            CONTEXT *ctxt, ADDRINT ip)
+VOID PIN_FAST_ANALYSIS_CALL read2MemoryFunc(ADDRINT memea_orig, ADDRINT memea_callback, ADDRINT memea2_orig,
+                                            ADDRINT memea2_callback, THREADID threadIndex, string* dis, CONTEXT* ctxt, ADDRINT ip)
 {
+    // case of multithreading - we care just about the main thread
+    if (PIN_ThreadId() != myThread) return;
+
     if (ip != lastIp)
     {
-        OutFile << "read2 analysis missing: "  << " " << *dis << endl;
+        OutFile << "read2 analysis missing: "
+                << " " << *dis << endl;
         errors++;
     }
 
@@ -162,13 +163,16 @@ VOID PIN_FAST_ANALYSIS_CALL read2MemoryFunc(ADDRINT memea_orig,ADDRINT memea_cal
     icountMemRead2++;
 }
 
-VOID PIN_FAST_ANALYSIS_CALL writeMemoryFunc(
-    THREADID threadIndex,ADDRINT memea_orig,ADDRINT memea_callback,ADDRINT ip, string *dis)
+VOID PIN_FAST_ANALYSIS_CALL writeMemoryFunc(THREADID threadIndex, ADDRINT memea_orig, ADDRINT memea_callback, ADDRINT ip,
+                                            string* dis)
 {
+    // case of multithreading - we care just about the main thread
+    if (PIN_ThreadId() != myThread) return;
 
     if (ip != lastIp)
     {
-        OutFile << "write analysis missing: " << " " << *dis << endl;
+        OutFile << "write analysis missing: "
+                << " " << *dis << endl;
         errors++;
     }
 
@@ -193,13 +197,15 @@ VOID PIN_FAST_ANALYSIS_CALL writeMemoryFunc(
     icountMemWrite++;
 }
 
-VOID PIN_FAST_ANALYSIS_CALL opMemoryFunc(
-    ADDRINT memea_orig,ADDRINT memea_callback, UINT32 bytes, ADDRINT ip, string *dis)
+VOID PIN_FAST_ANALYSIS_CALL opMemoryFunc(ADDRINT memea_orig, ADDRINT memea_callback, UINT32 bytes, ADDRINT ip, string* dis)
 {
+    // case of multithreading - we care just about the main thread
+    if (PIN_ThreadId() != myThread) return;
 
     if (ip != lastIp)
     {
-        OutFile << "op analysis missing: " << " " << *dis << endl;
+        OutFile << "op analysis missing: "
+                << " " << *dis << endl;
         errors++;
     }
 
@@ -217,33 +223,46 @@ VOID PIN_FAST_ANALYSIS_CALL opMemoryFunc(
 
     if ((memea_orig & mask) != memea_callback)
     {
-        OutFile << "op addresses incorrect: " << hex << memea_orig << " " << memea_callback << " "  << ip << " " << *dis << endl;
+        OutFile << "op addresses incorrect: " << hex << memea_orig << " " << memea_callback << " " << ip << " " << *dis << endl;
         errors++;
     }
 
     icountMemOp++;
 }
 
-ADDRINT PIN_FAST_ANALYSIS_CALL memoryCallback(PIN_MEM_TRANS_INFO* memTransInfo, VOID *v) 
+ADDRINT PIN_FAST_ANALYSIS_CALL memoryCallback(PIN_MEM_TRANS_INFO* memTransInfo, VOID* v)
 {
-    icountMemCall++;
-
-    lastIp = memTransInfo->ip;
-    lastBytes = memTransInfo->bytes;
-    lastIsAtomic = memTransInfo->flags.bits.isAtomic;
-    lastIsPrefetch = memTransInfo->flags.bits.isPrefetch;
-    lastIsRmw = memTransInfo->flags.bits.isRmw;
-
-    if (memTransInfo->memOpType == PIN_MEMOP_STORE )
+    // Test the threadIndex field (Mantis 0003429)
+    if (memTransInfo->threadIndex != PIN_ThreadId())
     {
-        lastWriteAddr = memTransInfo->addr;
+        cout << "PIN_MEM_TRANS_INFO.threadIndex bad value " << memTransInfo->threadIndex << " (should be " << PIN_ThreadId()
+             << ")" << endl;
+        errors++;
+    }
+
+    if (memTransInfo->flags.bits.isFromPin)
+    {
+        // PIN Internal memory dereference
+        return memTransInfo->addr;
+    }
+    if (PIN_ThreadId() == myThread)
+    {
+        icountMemCall++;
+        lastIp         = memTransInfo->ip;
+        lastBytes      = memTransInfo->bytes;
+        lastIsAtomic   = memTransInfo->flags.bits.isAtomic;
+        lastIsPrefetch = memTransInfo->flags.bits.isPrefetch;
+        lastIsRmw      = memTransInfo->flags.bits.isRmw;
+    }
+
+    if (memTransInfo->memOpType == PIN_MEMOP_STORE)
+    {
+        if (PIN_ThreadId() == myThread) lastWriteAddr = memTransInfo->addr;
 
         // Verify that we can call PIN API functions inside PIN
-        PIN_SafeCopy((void*)memTransInfo->addr,
-            (void*)memTransInfo->addr,
-            memTransInfo->bytes);
+        PIN_SafeCopy((void*)memTransInfo->addr, (void*)memTransInfo->addr, memTransInfo->bytes);
     }
-    else
+    else if (PIN_ThreadId() == myThread)
         lastReadAddr = memTransInfo->addr;
 
     // Check void parameter
@@ -257,87 +276,48 @@ ADDRINT PIN_FAST_ANALYSIS_CALL memoryCallback(PIN_MEM_TRANS_INFO* memTransInfo, 
 
     return (memTransInfo->addr & mask);
 }
-    
+
 // Pin calls this function every time a new instruction is encountered
-VOID Instruction(INS ins, VOID *v)
+VOID Instruction(INS ins, VOID* v)
 {
-    string *disptr = new string(INS_Disassemble(ins));
+    string* disptr = new string(INS_Disassemble(ins));
 
     // reads
-    if (INS_IsMemoryRead(ins)) {
-        INS_InsertCall(ins, 
-            IPOINT_BEFORE, 
-            (AFUNPTR)readMemoryFunc, 
-            IARG_FAST_ANALYSIS_CALL,
-            IARG_MEMORYREAD_EA,
-            IARG_MEMORYREAD_PTR,
-            IARG_THREAD_ID,
-            IARG_PTR, disptr,
-            IARG_INST_PTR,
-            IARG_END);
+    if (INS_IsMemoryRead(ins))
+    {
+        INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)readMemoryFunc, IARG_FAST_ANALYSIS_CALL, IARG_MEMORYREAD_EA,
+                       IARG_MEMORYREAD_PTR, IARG_THREAD_ID, IARG_PTR, disptr, IARG_INST_PTR, IARG_END);
     }
 
     // Handle read from memory to XMM
-    if (INS_Opcode(ins) == XED_ICLASS_MOVDQU &&
-        INS_IsMemoryRead(ins) && 
-        INS_OperandIsReg(ins, 0) &&
-        INS_OperandIsMemory(ins, 1))
+    if (INS_Opcode(ins) == XED_ICLASS_MOVDQU && INS_IsMemoryRead(ins) && INS_OperandIsReg(ins, 0) && INS_OperandIsMemory(ins, 1))
     {
-        if (REG_is_xmm(INS_OperandReg(ins, 0))) 
+        if (REG_is_xmm(INS_OperandReg(ins, 0)))
         {
-            INS_InsertCall(ins, 
-                IPOINT_BEFORE, 
-                (AFUNPTR)readXmmMemoryFunc, 
-                IARG_FAST_ANALYSIS_CALL,
-                IARG_MEMORYREAD_PTR,
-                IARG_MEMORYREAD_SIZE,
-                IARG_PTR, disptr,
-                IARG_INST_PTR,
-                IARG_END);
+            INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)readXmmMemoryFunc, IARG_FAST_ANALYSIS_CALL, IARG_MEMORYREAD_PTR,
+                           IARG_MEMORYREAD_SIZE, IARG_PTR, disptr, IARG_INST_PTR, IARG_END);
         }
     }
 
     // Handle Prefetch
-    if (INS_IsMemoryRead(ins) && 
-        xed_decoded_inst_is_prefetch(INS_XedDec(ins))) 
+    if (INS_IsMemoryRead(ins) && xed_decoded_inst_is_prefetch(INS_XedDec(ins)))
     {
-        INS_InsertCall(ins, 
-            IPOINT_BEFORE, 
-            (AFUNPTR)verifyPrefetchFunc, 
-            IARG_FAST_ANALYSIS_CALL,
-            IARG_MEMORYREAD_PTR,
-            IARG_MEMORYREAD_SIZE,
-            IARG_PTR, disptr,
-            IARG_INST_PTR,
-            IARG_END);
+        INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)verifyPrefetchFunc, IARG_FAST_ANALYSIS_CALL, IARG_MEMORYREAD_PTR,
+                       IARG_MEMORYREAD_SIZE, IARG_PTR, disptr, IARG_INST_PTR, IARG_END);
     }
 
     // Handle Atomic
     if (INS_IsAtomicUpdate(ins))
     {
-        INS_InsertCall(ins, 
-            IPOINT_BEFORE, 
-            (AFUNPTR)verifyAtomicFunc, 
-            IARG_FAST_ANALYSIS_CALL,
-            IARG_MEMORYWRITE_PTR,
-            IARG_MEMORYWRITE_SIZE,
-            IARG_PTR, disptr,
-            IARG_INST_PTR,
-            IARG_END);
+        INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)verifyAtomicFunc, IARG_FAST_ANALYSIS_CALL, IARG_MEMORYWRITE_PTR,
+                       IARG_MEMORYWRITE_SIZE, IARG_PTR, disptr, IARG_INST_PTR, IARG_END);
     }
 
     // writes
-    if (INS_IsMemoryWrite(ins)) {
-        INS_InsertCall(ins, 
-            IPOINT_BEFORE, 
-            (AFUNPTR)writeMemoryFunc, 
-            IARG_FAST_ANALYSIS_CALL,
-            IARG_THREAD_ID,
-            IARG_MEMORYWRITE_EA,
-            IARG_MEMORYWRITE_PTR ,
-            IARG_INST_PTR,
-            IARG_PTR, disptr, 
-            IARG_END);
+    if (INS_IsMemoryWrite(ins))
+    {
+        INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)writeMemoryFunc, IARG_FAST_ANALYSIS_CALL, IARG_THREAD_ID, IARG_MEMORYWRITE_EA,
+                       IARG_MEMORYWRITE_PTR, IARG_INST_PTR, IARG_PTR, disptr, IARG_END);
     }
 
     UINT32 memOperands = INS_MemoryOperandCount(ins);
@@ -346,75 +326,47 @@ VOID Instruction(INS ins, VOID *v)
         // OPs
         for (UINT32 memOp = 0; memOp < memOperands; memOp++)
         {
-            if (INS_MemoryOperandIsRead(ins, memOp) ||  
-                INS_MemoryOperandIsWritten(ins, memOp)) 
+            if (INS_MemoryOperandIsRead(ins, memOp) || INS_MemoryOperandIsWritten(ins, memOp))
             {
-                INS_InsertCall(ins, 
-                    IPOINT_BEFORE, 
-                    (AFUNPTR)opMemoryFunc, 
-                    IARG_FAST_ANALYSIS_CALL,
-                    IARG_MEMORYOP_EA, memOp,
-                    IARG_MEMORYOP_PTR, memOp,
-                    IARG_UINT32,INS_MemoryOperandSize(ins,memOp),
-                    IARG_INST_PTR ,
-                    IARG_PTR, disptr, 
-                    IARG_END);
+                INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)opMemoryFunc, IARG_FAST_ANALYSIS_CALL, IARG_MEMORYOP_EA, memOp,
+                               IARG_MEMORYOP_PTR, memOp, IARG_UINT32, INS_MemoryOperandSize(ins, memOp), IARG_INST_PTR, IARG_PTR,
+                               disptr, IARG_END);
             }
 
             // Handle RMW
-            if (INS_MemoryOperandIsRead(ins, memOp) &&           
-                INS_MemoryOperandIsWritten(ins, memOp))
+            if (INS_MemoryOperandIsRead(ins, memOp) && INS_MemoryOperandIsWritten(ins, memOp))
             {
-                INS_InsertCall(ins, 
-                    IPOINT_BEFORE, 
-                    (AFUNPTR)verifyRmwFunc, 
-                    IARG_FAST_ANALYSIS_CALL,
-                    IARG_MEMORYOP_PTR, memOp,
-                    IARG_UINT32,INS_MemoryOperandSize(ins,memOp),
-                    IARG_PTR, disptr,
-                    IARG_INST_PTR,
-                    IARG_END);
+                INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)verifyRmwFunc, IARG_FAST_ANALYSIS_CALL, IARG_MEMORYOP_PTR, memOp,
+                               IARG_UINT32, INS_MemoryOperandSize(ins, memOp), IARG_PTR, disptr, IARG_INST_PTR, IARG_END);
             }
         }
     }
 
     // READ2
-    if (INS_HasMemoryRead2(ins)) {
-        INS_InsertCall(ins, 
-            IPOINT_BEFORE, 
-            (AFUNPTR)read2MemoryFunc, 
-            IARG_FAST_ANALYSIS_CALL,
-            IARG_MEMORYREAD_EA,
-            IARG_MEMORYREAD_PTR,
-            IARG_MEMORYREAD2_EA,
-            IARG_MEMORYREAD2_PTR,
-            IARG_THREAD_ID,
-            IARG_PTR, disptr, 
-            IARG_CONTEXT,
-            IARG_INST_PTR,
-            IARG_END);
+    if (INS_HasMemoryRead2(ins))
+    {
+        INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)read2MemoryFunc, IARG_FAST_ANALYSIS_CALL, IARG_MEMORYREAD_EA,
+                       IARG_MEMORYREAD_PTR, IARG_MEMORYREAD2_EA, IARG_MEMORYREAD2_PTR, IARG_THREAD_ID, IARG_PTR, disptr,
+                       IARG_CONTEXT, IARG_INST_PTR, IARG_END);
     }
-
 }
 
-
-KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
-    "o", "memaddrcall.out", "specify output file name");
+KNOB< string > KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool", "o", "memaddrcall.out", "specify output file name");
 
 // This function is called when the application exits
-VOID Fini(INT32 code, VOID *v)
+VOID Fini(INT32 code, VOID* v)
 {
     // Write to a file since cout and cerr maybe closed by the application
     OutFile.setf(ios::showbase);
     OutFile << "Count Mem Reads " << icountMemRead << endl;
     OutFile << "Count Mem Read2s " << icountMemRead2 << endl;
     OutFile << "Count Mem Writes " << icountMemWrite << endl;
-    OutFile << "Count Mem Ops "    << icountMemOp << endl;
+    OutFile << "Count Mem Ops " << icountMemOp << endl;
     OutFile << "Count Mem callbacks " << icountMemCall << endl;
     OutFile << "Errors " << errors << endl;
     OutFile.close();
 
-    // If we have errors then terminate abnormally 
+    // If we have errors then terminate abnormally
     if (errors)
     {
         cout << "Test memory_addr_callback is terminated cause found " << errors << " errors " << endl;
@@ -437,12 +389,14 @@ INT32 Usage()
 /* Main                                                                  */
 /* ===================================================================== */
 
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
     ADDRINT dummy = 0xa5a5a5a5;
 
     // Initialize pin
     if (PIN_Init(argc, argv)) return Usage();
+
+    PIN_AddThreadStartFunction(ThreadStart, NULL);
 
     OutFile.open(KnobOutputFile.Value().c_str());
 
@@ -457,7 +411,7 @@ int main(int argc, char * argv[])
     }
 
     // Register memory callback
-    PIN_AddMemoryAddressTransFunction(memoryCallback,(VOID*)dummy);
+    PIN_AddMemoryAddressTransFunction(memoryCallback, (VOID*)dummy);
 
     // Verify that the PIN API is not null after registration
     if (!PIN_GetMemoryAddressTransFunction())
@@ -471,6 +425,6 @@ int main(int argc, char * argv[])
 
     // Start the program, never returns
     PIN_StartProgram();
-    
+
     return errors;
 }

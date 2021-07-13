@@ -1,3 +1,14 @@
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 # On linux 64 
 # % gcc -nostdlib -o reptest reptest.S
 # % pinbin -- reptest
@@ -19,8 +30,8 @@ _start:
         
 # Test different string comparison
         inc     %rbx
-	lea	one, %rsi
-	lea	two, %rdi
+	lea	one(%rip), %rsi
+	lea	two(%rip), %rdi
 	mov     $strlen,%rcx
 	repe cmpsb
         cmp     $(strlen-2),%rcx                # Should fail at second byte
@@ -28,8 +39,8 @@ _start:
 
 # Test same string comparison
         inc     %rbx
-	lea	one, %rsi
-	lea	one, %rdi
+	lea	one(%rip), %rsi
+	lea	one(%rip), %rdi
 	mov     $strlen,%rcx
 	repe cmpsb 
         test    %rcx,%rcx                       # Should run full length
@@ -37,8 +48,8 @@ _start:
 
 # Test same string comparison, but with no count...
         inc     %rbx
-	lea	one, %rsi
-	lea	one, %rdi
+	lea	one(%rip), %rsi
+	lea	one(%rip), %rdi
         xor     %rcx,%rcx
 	repe cmpsb 
         test    %rcx,%rcx                       # Should still be zero
@@ -46,15 +57,15 @@ _start:
 
 # Test scasd
         inc     %rbx
-	mov	one, %rax
-	lea	two, %rdi
+	mov	one(%rip), %rax
+	lea	two(%rip), %rdi
 	scasw
 	mov     %rax,%rcx
 	
 # Test same string comparison, but with no count...
         inc     %rbx
-        lea     one, %rsi
-        lea     one, %rdi
+        lea     one(%rip), %rsi
+        lea     one(%rip), %rdi
         xor     %rcx,%rcx
         repe cmpsb
         test    %rcx,%rcx                       # Should still be zero
@@ -62,8 +73,8 @@ _start:
 
 # Test scasd
         inc     %rbx
-        mov     one, %rax
-        lea     two, %rdi
+        mov     one(%rip), %rax
+        lea     two(%rip), %rdi
         scasw
         mov     %rax,%rcx
 

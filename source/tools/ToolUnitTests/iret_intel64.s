@@ -1,3 +1,14 @@
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #
 # Test for iretq in 64 bit mode.
 # The code for iretd is commented out, since I haven't been able to find
@@ -24,13 +35,15 @@
 # here:   
 #         ret
 
-iretq_func:
-        mov $-2,%rax
+iret_func:
+        mov $-1,%rax
         iretq
-        
-.type iretqTest, @function
-.global iretqTest
-iretqTest:
+
+#ifndef TARGET_MAC        
+.type iretTest, @function
+#endif
+.global iretTest
+iretTest:
         push    %rbx
         # Move the stack pointer down, so that we can check that the stack pointer
         # is correctly restored by the iretq
@@ -42,7 +55,7 @@ iretqTest:
         pushfq
         mov     %cs,%rax
         push    %rax
-        call    iretq_func
+        call    iret_func
         pop     %rbx
         ret
         

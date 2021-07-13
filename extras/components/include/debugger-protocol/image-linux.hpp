@@ -1,34 +1,16 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software and the related documents are Intel copyrighted materials, and your
+ * use of them is governed by the express license under which they were provided to
+ * you ("License"). Unless the License provides otherwise, you may not use, modify,
+ * copy, publish, distribute, disclose or transmit this software or the related
+ * documents without Intel's prior written permission.
+ * 
+ * This software and the related documents are provided as is, with no express or
+ * implied warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
-// <ORIGINAL-AUTHOR>: Greg Lueck
 // <COMPONENT>: debugger-protocol
 // <FILE-TYPE>: component public header
 
@@ -37,8 +19,8 @@ END_LEGAL */
 
 #include <vector>
 
-namespace DEBUGGER_PROTOCOL {
-
+namespace DEBUGGER_PROTOCOL
+{
 /*!
  * In the future, new image types may be added.  To retain backward compatibility,
  * clients should ignore types they don't recognize.
@@ -71,7 +53,7 @@ enum IMAGE_TYPE_LINUX
  */
 enum IMAGE_INFO_LINUX_VERSION
 {
-    IMAGE_INFO_LINUX_VERSION_0    ///< This is the only defined version currently.
+    IMAGE_INFO_LINUX_VERSION_0 ///< This is the only defined version currently.
 };
 
 /*!
@@ -79,12 +61,12 @@ enum IMAGE_INFO_LINUX_VERSION
  */
 struct /*<UTILITY>*/ IMAGE_INFO_LINUX
 {
-    IMAGE_INFO_LINUX_VERSION _version;  ///< Tells which fields in this structure are valid.
-    IMAGE_TYPE_LINUX _type;             ///< The image type.
-    std::string _name;                  ///< Absolute pathname to the ELF file (UTF-8).
-    FUND::ANYADDR _offset;              ///< Offset from ELF file's link-time address to it's loaded address.
-    FUND::ADDRINT _lm;                  ///< Pointer to the image's struct link_map
-    FUND::ADDRINT _l_ld;                ///< Points to the image's PT_DYNAMIC segment
+    IMAGE_INFO_LINUX_VERSION _version; ///< Tells which fields in this structure are valid.
+    IMAGE_TYPE_LINUX _type;            ///< The image type.
+    std::string _name;                 ///< Absolute pathname to the ELF file (UTF-8).
+    ANYADDR _offset;                   ///< Offset from ELF file's link-time address to it's loaded address.
+    ADDRINT _lm;                       ///< Pointer to the image's struct link_map
+    ADDRINT _l_ld;                     ///< Points to the image's PT_DYNAMIC segment
 };
 
 /*!
@@ -93,9 +75,10 @@ struct /*<UTILITY>*/ IMAGE_INFO_LINUX
  */
 struct /*<UTILITY>*/ SVR4_IMAGES_LIST_LINUX
 {
-    FUND::ADDRINT _main_lm;             ///< Pointer to the main image's struct link_map
-    std::vector<IMAGE_INFO_LINUX> _list;///< List of all loaded images
+    SVR4_IMAGES_LIST_LINUX() : _main_lm(0) {} ///< Initialization
+    ADDRINT _main_lm;                         ///< Pointer to the main image's struct link_map
+    std::vector< IMAGE_INFO_LINUX > _list;    ///< List of all loaded images
 };
 
-} // namespace
+} // namespace DEBUGGER_PROTOCOL
 #endif // file guard

@@ -1,33 +1,14 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * Negative test - Do Not Use!!!
  * 
@@ -36,6 +17,14 @@ END_LEGAL */
 #include <iostream>
 #include <stdio.h>
 #include <stddef.h>
+using std::cerr;
+using std::endl;
+using std::string;
+
+/*
+ * Name of the output file
+ */
+KNOB< string > KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool", "o", "buffererror.out", "output file");
 
 /* Struct for holding memory references.  Rather than having two separate
  * buffers for loads and stores, we just use one struct that includes a
@@ -49,7 +38,7 @@ struct MEMREF
     UINT32 load;
 };
 
-FILE *outfile;
+FILE* outfile;
 
 BUFFER_ID bufId;
 PIN_LOCK fileLock;
@@ -67,26 +56,35 @@ INT32 Usage()
     return -1;
 }
 
-VOID Trace(TRACE trace, VOID *v){
+VOID Trace(TRACE trace, VOID* v)
+{
+    for (BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl = BBL_Next(bbl))
+    {
+        for (INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins))
+        {
+            if (INS_MemoryOperandCount(ins) == 0) continue;
 
-    UINT32 refSize;
-           
-    for(BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl=BBL_Next(bbl)){
-        for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins=INS_Next(ins)){
-            if(INS_IsMemoryRead(ins)){
+            UINT32 readSize         = 0;
+            UINT32 readOperandCount = 0;
 
-                refSize = INS_MemoryReadSize(ins);
-                
+            for (UINT32 opIdx = 0; opIdx < INS_MemoryOperandCount(ins); opIdx++)
+            {
+                if (INS_MemoryOperandIsRead(ins, opIdx))
+                {
+                    readSize = INS_MemoryOperandSize(ins, opIdx);
+                    readOperandCount++;
+                    break;
+                }
+            }
+
+            if (readOperandCount > 0)
+            {
                 // This is an error test!!! IARG_REG_REFERENCE cannot be used
                 // with the InsertFillBuffer API because it cannot be inlined.
                 //
-                INS_InsertFillBuffer(ins, IPOINT_BEFORE, bufId,
-                    IARG_REG_REFERENCE, offsetof(struct MEMREF, pc),
-                    IARG_MEMORYREAD_EA, offsetof(struct MEMREF, address),
-                    IARG_UINT32, refSize, offsetof(struct MEMREF, size), 
-                    IARG_UINT32, 1, offsetof(struct MEMREF, load),
-                    IARG_END);
-
+                INS_InsertFillBuffer(ins, IPOINT_BEFORE, bufId, IARG_REG_REFERENCE, offsetof(struct MEMREF, pc),
+                                     IARG_MEMORYREAD_EA, offsetof(struct MEMREF, address), IARG_UINT32, readSize,
+                                     offsetof(struct MEMREF, size), IARG_UINT32, 1, offsetof(struct MEMREF, load), IARG_END);
             }
         }
     }
@@ -103,19 +101,19 @@ VOID Trace(TRACE trace, VOID *v){
  * @param[in] v			callback value
  * @return  A pointer to the buffer to resume filling.
  */
-VOID * BufferFull(BUFFER_ID bid, THREADID tid, const CONTEXT *ctxt, VOID *buf,
-                  UINT64 numElements, VOID *v)
+VOID* BufferFull(BUFFER_ID bid, THREADID tid, const CONTEXT* ctxt, VOID* buf, UINT64 numElements, VOID* v)
 {
     PIN_GetLock(&fileLock, 1);
 
     ASSERTX(buf == PIN_GetThreadData(buf_key, tid));
-    
-    struct MEMREF* reference=(struct MEMREF*)buf;
+
+    struct MEMREF* reference = (struct MEMREF*)buf;
     UINT64 i;
 
-    for(i=0; i<numElements; i++, reference++){
-        fprintf(outfile, "%lx %lx %u %u\n", (unsigned long)reference->pc, (unsigned long)reference->address,
-                reference->size, reference->load);   
+    for (i = 0; i < numElements; i++, reference++)
+    {
+        fprintf(outfile, "%lx %lx %u %u\n", (unsigned long)reference->pc, (unsigned long)reference->address, reference->size,
+                reference->load);
     }
     fflush(outfile);
     PIN_ReleaseLock(&fileLock);
@@ -130,16 +128,15 @@ VOID * BufferFull(BUFFER_ID bid, THREADID tid, const CONTEXT *ctxt, VOID *buf,
  * @param[in]   v               value specified by the tool in the 
  *                              PIN_AddFiniFunction function call
  */
-VOID Fini(INT32 code, VOID *v)
+VOID Fini(INT32 code, VOID* v)
 {
-
     PIN_GetLock(&fileLock, 1);
     fclose(outfile);
     printf("outfile closed\n");
     PIN_ReleaseLock(&fileLock);
 }
 
-void ThreadStart(THREADID tid, CONTEXT * context, int flags, void * v)
+void ThreadStart(THREADID tid, CONTEXT* context, int flags, void* v)
 {
     // We check that we got the right thing in the buffer full callback
     PIN_SetThreadData(buf_key, PIN_GetBufferPointer(context, bufId), tid);
@@ -152,27 +149,28 @@ void ThreadStart(THREADID tid, CONTEXT * context, int flags, void * v)
  * @param[in]   argv            array of command line arguments, 
  *                              including pin -t <toolname> -- ...
  */
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     // Initialize PIN library. Print help message if -h(elp) is specified
-    // in the command line or the command line is invalid 
-    if( PIN_Init(argc,argv) )
+    // in the command line or the command line is invalid
+    if (PIN_Init(argc, argv))
     {
         return Usage();
     }
-    
-    // Initialize the memory reference buffer
-    bufId = PIN_DefineTraceBuffer(sizeof(struct MEMREF), NUM_BUF_PAGES,
-                                  BufferFull, 0);
 
-    if(bufId == BUFFER_ID_INVALID){
+    // Initialize the memory reference buffer
+    bufId = PIN_DefineTraceBuffer(sizeof(struct MEMREF), NUM_BUF_PAGES, BufferFull, 0);
+
+    if (bufId == BUFFER_ID_INVALID)
+    {
         cerr << "Error allocating initial buffer" << endl;
         return 1;
     }
 
-    outfile = fopen("bufferaddr.out", "w");
-    if(!outfile){
-        cerr << "Couldn't open bufferaddr.out" << endl;
+    outfile = fopen(KnobOutputFile.Value().c_str(), "w");
+    if (!outfile)
+    {
+        cerr << "Couldn't open buffererror.out" << endl;
         return 1;
     }
 
@@ -180,17 +178,15 @@ int main(int argc, char *argv[])
 
     // add an instrumentation function
     TRACE_AddInstrumentFunction(Trace, 0);
-    
+
     // Register function to be called when the application exits
     PIN_AddFiniFunction(Fini, 0);
 
     buf_key = PIN_CreateThreadDataKey(0);
     PIN_AddThreadStartFunction(ThreadStart, 0);
-    
+
     // Start the program, never returns
     PIN_StartProgram();
-    
+
     return 0;
 }
-
-

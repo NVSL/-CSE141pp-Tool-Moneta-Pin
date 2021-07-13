@@ -1,36 +1,17 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * Sample buffering tool
- * 
+ *
  * This tool collects an address trace of instructions that access memory
  * by filling a buffer.  When the buffer overflows,the callback writes all
  * of the collected records to a file.
@@ -40,15 +21,18 @@ END_LEGAL */
 #include <fstream>
 #include <stdlib.h>
 #include <stddef.h>
-
+#include <unistd.h>
 #include "pin.H"
-#include "portability.H"
-using namespace std;
+using std::cerr;
+using std::endl;
+using std::hex;
+using std::ofstream;
+using std::string;
 
 /*
  * Name of the output file
  */
-KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool", "o", "buffer.out", "output file");
+KNOB< string > KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool", "o", "buffer-then.out", "output file");
 
 /*
  * The ID of the buffer
@@ -72,10 +56,10 @@ TLS_KEY mlog_key;
  */
 struct MEMREF
 {
-    ADDRINT     pc;
-    ADDRINT     ea;
-    UINT32      size;
-    BOOL        read;
+    ADDRINT pc;
+    ADDRINT ea;
+    UINT32 size;
+    BOOL read;
 };
 
 /*
@@ -84,41 +68,43 @@ struct MEMREF
 class MLOG
 {
   public:
-    MLOG(THREADID tid);
+    MLOG() {}
     ~MLOG();
-    
-    VOID DumpBufferToFile( struct MEMREF * reference, UINT64 numElements, THREADID tid );
-    
+
+    VOID DumpBufferToFile(struct MEMREF* reference, UINT64 numElements, THREADID tid);
+
   private:
     ofstream _ofile;
 };
 
-MLOG::MLOG(THREADID tid)
-{
-    string filename = KnobOutputFile.Value() + "." + decstr(getpid_portable()) + "." + decstr(tid);
-    
-    _ofile.open(filename.c_str());
-    
-    if ( ! _ofile )
-    {
-        cerr << "Error: could not open output file." << endl;
-        exit(1);
-    }
-    
-    _ofile << hex;
-}
-
 MLOG::~MLOG()
 {
-    _ofile.close();
+    if (_ofile.is_open())
+    {
+        _ofile.close();
+    }
 }
 
-VOID MLOG::DumpBufferToFile( struct MEMREF * reference, UINT64 numElements, THREADID tid )
+VOID MLOG::DumpBufferToFile(struct MEMREF* reference, UINT64 numElements, THREADID tid)
 {
-    for(UINT64 i=0; i<numElements; i++, reference++)
+    if (!_ofile.is_open())
     {
-        if (reference->ea != 0)
-            _ofile << reference->pc << "   " << reference->ea << endl;
+        const string filename = KnobOutputFile.Value() + "." + decstr(getpid()) + "." + decstr(tid);
+
+        _ofile.open(filename.c_str());
+
+        if (!_ofile.is_open())
+        {
+            cerr << "Error: could not open output file." << endl;
+            exit(1);
+        }
+
+        _ofile << hex;
+    }
+
+    for (UINT64 i = 0; i < numElements; i++, reference++)
+    {
+        if (reference->ea != 0) _ofile << reference->pc << "   " << reference->ea << endl;
     }
 }
 
@@ -128,58 +114,64 @@ VOID MLOG::DumpBufferToFile( struct MEMREF * reference, UINT64 numElements, THRE
  *
  **************************************************************************/
 
-int predicate( int count )
-{
-    return count;
-}
+int predicate(int count) { return count; }
 
 /*
  * Insert code to write data to a thread-specific buffer for instructions
  * that access memory.
  */
-VOID Trace(TRACE trace, VOID *v)
+VOID Trace(TRACE trace, VOID* v)
 {
-    UINT32 refSize;
-    
-    for(BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl=BBL_Next(bbl))
+    for (BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl = BBL_Next(bbl))
     {
-        for(INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins=INS_Next(ins))
+        for (INS ins = BBL_InsHead(bbl); INS_Valid(ins); ins = INS_Next(ins))
         {
-            if(INS_IsMemoryRead(ins))
+            if (INS_MemoryOperandCount(ins) == 0) continue;
+
+            UINT32 readSize = 0, read2Size = 0, writeSize = 0;
+            UINT32 readOperandCount = 0, writeOperandCount = 0;
+
+            for (UINT32 opIdx = 0; opIdx < INS_MemoryOperandCount(ins); opIdx++)
             {
-                refSize = INS_MemoryReadSize(ins);
-                INS_InsertIfCall(ins, IPOINT_BEFORE, (AFUNPTR)predicate, IARG_UINT32, 1, IARG_END);
-                INS_InsertFillBufferThen(ins, IPOINT_BEFORE, bufId,
-                                     IARG_INST_PTR, offsetof(struct MEMREF, pc),
-                                     IARG_MEMORYREAD_EA, offsetof(struct MEMREF, ea),
-                                     IARG_UINT32, refSize, offsetof(struct MEMREF, size),
-                                     IARG_BOOL, TRUE, offsetof(struct MEMREF, read),
-                                     IARG_END);
+                if (INS_MemoryOperandIsRead(ins, opIdx))
+                {
+                    if (readSize == 0)
+                        readSize = INS_MemoryOperandSize(ins, opIdx);
+                    else
+                        read2Size = INS_MemoryOperandSize(ins, opIdx);
+
+                    readOperandCount++;
+                }
+                if (INS_MemoryOperandIsWritten(ins, opIdx))
+                {
+                    writeSize = INS_MemoryOperandSize(ins, opIdx);
+                    writeOperandCount++;
+                }
             }
-            
-            if (INS_HasMemoryRead2(ins))
+
+            if (readOperandCount > 0)
             {
-                refSize = INS_MemoryReadSize(ins);
                 INS_InsertIfCall(ins, IPOINT_BEFORE, (AFUNPTR)predicate, IARG_UINT32, 1, IARG_END);
-                INS_InsertFillBufferThen(ins, IPOINT_BEFORE, bufId,
-                                     IARG_INST_PTR, offsetof(struct MEMREF, pc),
-                                     IARG_MEMORYREAD2_EA, offsetof(struct MEMREF, ea),
-                                     IARG_UINT32, refSize, offsetof(struct MEMREF, size),
-                                     IARG_BOOL, TRUE, offsetof(struct MEMREF, read),
-                                     IARG_END);
+                INS_InsertFillBufferThen(ins, IPOINT_BEFORE, bufId, IARG_INST_PTR, offsetof(struct MEMREF, pc),
+                                         IARG_MEMORYREAD_EA, offsetof(struct MEMREF, ea), IARG_UINT32, readSize,
+                                         offsetof(struct MEMREF, size), IARG_BOOL, TRUE, offsetof(struct MEMREF, read), IARG_END);
             }
-            
-            if(INS_IsMemoryWrite(ins))
+
+            if (readOperandCount == 2)
             {
-                refSize = INS_MemoryWriteSize(ins);
-                
+                INS_InsertIfCall(ins, IPOINT_BEFORE, (AFUNPTR)predicate, IARG_UINT32, 1, IARG_END);
+                INS_InsertFillBufferThen(ins, IPOINT_BEFORE, bufId, IARG_INST_PTR, offsetof(struct MEMREF, pc),
+                                         IARG_MEMORYREAD2_EA, offsetof(struct MEMREF, ea), IARG_UINT32, read2Size,
+                                         offsetof(struct MEMREF, size), IARG_BOOL, TRUE, offsetof(struct MEMREF, read), IARG_END);
+            }
+
+            if (writeOperandCount > 0)
+            {
                 INS_InsertIfCall(ins, IPOINT_BEFORE, (AFUNPTR)predicate, IARG_UINT32, 0, IARG_END);
-                INS_InsertFillBufferThen(ins, IPOINT_BEFORE, bufId,
-                                     IARG_INST_PTR, offsetof(struct MEMREF, pc),
-                                     IARG_MEMORYWRITE_EA, offsetof(struct MEMREF, ea),
-                                     IARG_UINT32, refSize, offsetof(struct MEMREF, size),
-                                     IARG_BOOL, FALSE, offsetof(struct MEMREF, read),
-                                     IARG_END);
+                INS_InsertFillBufferThen(ins, IPOINT_BEFORE, bufId, IARG_INST_PTR, offsetof(struct MEMREF, pc),
+                                         IARG_MEMORYWRITE_EA, offsetof(struct MEMREF, ea), IARG_UINT32, writeSize,
+                                         offsetof(struct MEMREF, size), IARG_BOOL, FALSE, offsetof(struct MEMREF, read),
+                                         IARG_END);
             }
         }
     }
@@ -202,15 +194,14 @@ VOID Trace(TRACE trace, VOID *v)
  * @param[in] v			callback value
  * @return  A pointer to the buffer to resume filling.
  */
-VOID * BufferFull(BUFFER_ID id, THREADID tid, const CONTEXT *ctxt, VOID *buf,
-                  UINT64 numElements, VOID *v)
+VOID* BufferFull(BUFFER_ID id, THREADID tid, const CONTEXT* ctxt, VOID* buf, UINT64 numElements, VOID* v)
 {
-    struct MEMREF * reference=(struct MEMREF*)buf;
-    
-    MLOG * mlog = static_cast<MLOG*>( PIN_GetThreadData( mlog_key, tid ) );
-    
-    mlog->DumpBufferToFile( reference, numElements, tid );
-    
+    struct MEMREF* reference = (struct MEMREF*)buf;
+
+    MLOG* mlog = static_cast< MLOG* >(PIN_GetThreadData(mlog_key, tid));
+
+    mlog->DumpBufferToFile(reference, numElements, tid);
+
     return buf;
 }
 
@@ -218,20 +209,20 @@ VOID * BufferFull(BUFFER_ID id, THREADID tid, const CONTEXT *ctxt, VOID *buf,
  * Note that opening a file in a callback is only supported on Linux systems.
  * See buffer-win.cpp for how to work around this issue on Windows.
  */
-VOID ThreadStart(THREADID tid, CONTEXT *ctxt, INT32 flags, VOID *v)
+VOID ThreadStart(THREADID tid, CONTEXT* ctxt, INT32 flags, VOID* v)
 {
     // There is a new MLOG for every thread.  Opens the output file.
-    MLOG * mlog = new MLOG(tid);
-    
+    MLOG* mlog = new MLOG;
+
     // A thread will need to look up its MLOG, so save pointer in TLS
     PIN_SetThreadData(mlog_key, mlog, tid);
 }
 
-VOID ThreadFini(THREADID tid, const CONTEXT *ctxt, INT32 code, VOID *v)
+VOID ThreadFini(THREADID tid, const CONTEXT* ctxt, INT32 code, VOID* v)
 {
-    MLOG * mlog = static_cast<MLOG*>(PIN_GetThreadData(mlog_key, tid));
+    MLOG* mlog = static_cast< MLOG* >(PIN_GetThreadData(mlog_key, tid));
     delete mlog;
-    
+
     PIN_SetThreadData(mlog_key, 0, tid);
 }
 
@@ -256,39 +247,38 @@ INT32 Usage()
  * @param[in]   argv            array of command line arguments,
  *                              including pin -t <toolname> -- ...
  */
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     // Initialize PIN library. Print help message if -h(elp) is specified
     // in the command line or the command line is invalid
-    if( PIN_Init(argc,argv) )
+    if (PIN_Init(argc, argv))
     {
         return Usage();
     }
-    
+
     // Initialize the memory reference buffer;
     // set up the callback to process the buffer.
     //
-    bufId = PIN_DefineTraceBuffer(sizeof(struct MEMREF), NUM_BUF_PAGES,
-                                  BufferFull, 0);
-    
-    if(bufId == BUFFER_ID_INVALID)
+    bufId = PIN_DefineTraceBuffer(sizeof(struct MEMREF), NUM_BUF_PAGES, BufferFull, 0);
+
+    if (bufId == BUFFER_ID_INVALID)
     {
         cerr << "Error: could not allocate initial buffer" << endl;
         return 1;
     }
-    
+
     // Initialize thread-specific data not handled by buffering api.
     mlog_key = PIN_CreateThreadDataKey(0);
-    
+
     // add an instrumentation function
     TRACE_AddInstrumentFunction(Trace, 0);
-    
+
     // add callbacks
     PIN_AddThreadStartFunction(ThreadStart, 0);
     PIN_AddThreadFiniFunction(ThreadFini, 0);
-    
+
     // Start the program, never returns
     PIN_StartProgram();
-    
+
     return 0;
 }

@@ -1,33 +1,14 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /* When the first instructions of the application is executed, the application is counted as
  * Stopped in the debugger.
  * In this test we try to stop and resume the debugged application during that time to check
@@ -36,11 +17,10 @@ END_LEGAL */
 #include <fstream>
 #include "pin.H"
 
-KNOB<std::string> KnobOut(KNOB_MODE_WRITEONCE, "pintool", "o",
-    "stop-resume-when-suspended.out", "Output file");
+KNOB< std::string > KnobOut(KNOB_MODE_WRITEONCE, "pintool", "o", "stop-resume-when-suspended.out", "Output file");
 
 static std::ofstream Out;
-static PIN_LOCK lock;
+static PIN_LOCK pinLock;
 static volatile THREADID mainThread = INVALID_THREADID;
 
 // Check that stopping and resuming the program from the same thread works
@@ -51,25 +31,25 @@ static VOID SuspendResume(THREADID tid)
 
     // On Windows we might be called from APC created threads that we
     // don't expect. Be sure to filter them
-    if (tid != mainThread)
-        return;
+    if (tid != mainThread) return;
 
-    PIN_StopApplicationThreads(tid);
-    PIN_ResumeApplicationThreads(tid);
+    if (PIN_StopApplicationThreads(tid))
+    {
+        // Resume threads only if stop succeeded
+        PIN_ResumeApplicationThreads(tid);
+    }
 }
 
-static VOID ThreadStart(THREADID threadid, CONTEXT *ctxt, INT32 flags, VOID *v)
+static VOID ThreadStart(THREADID threadid, CONTEXT* ctxt, INT32 flags, VOID* v)
 {
-    PIN_GetLock(&lock, threadid);
+    PIN_GetLock(&pinLock, threadid);
 
     // Record the first thread that started and call it the main thread
-    if (INVALID_THREADID == mainThread)
-        mainThread = threadid;
-    PIN_ReleaseLock(&lock);
+    if (INVALID_THREADID == mainThread) mainThread = threadid;
+    PIN_ReleaseLock(&pinLock);
 }
 
-
-static void OnExit(INT32, VOID *)
+static void OnExit(INT32, VOID*)
 {
     Out << "OnExit" << std::endl;
     Out.close();
@@ -91,14 +71,14 @@ static VOID Image(IMG img, VOID* v)
     }
 }
 
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
     PIN_Init(argc, argv);
 
     Out.open(KnobOut.Value().c_str());
 
     // Initialize the lock
-    PIN_InitLock(&lock);
+    PIN_InitLock(&pinLock);
 
     // Register ThreadStart to be called when a thread starts.
     PIN_AddThreadStartFunction(ThreadStart, NULL);

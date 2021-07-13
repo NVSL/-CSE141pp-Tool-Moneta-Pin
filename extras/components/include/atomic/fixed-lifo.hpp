@@ -1,50 +1,29 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software and the related documents are Intel copyrighted materials, and your
+ * use of them is governed by the express license under which they were provided to
+ * you ("License"). Unless the License provides otherwise, you may not use, modify,
+ * copy, publish, distribute, disclose or transmit this software or the related
+ * documents without Intel's prior written permission.
+ * 
+ * This software and the related documents are provided as is, with no express or
+ * implied warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
-// <ORIGINAL-AUTHOR>: Greg Lueck
 // <COMPONENT>: atomic
 // <FILE-TYPE>: component public header
 
 #ifndef ATOMIC_FIXED_LIFO_HPP
 #define ATOMIC_FIXED_LIFO_HPP
 
-#include "fund.hpp"
 #include "util/numberbits.hpp"
 #include "atomic/config.hpp"
 #include "atomic/lifo-ctr.hpp"
 #include "atomic/nullstats.hpp"
 
-
-namespace ATOMIC {
-
-
+namespace ATOMIC
+{
 /*! @brief  Last-in-first-out queue with pre-allocated elements.
  *
  * A LIFO queue that is thread safe and safe to use from signal handlers.  It uses
@@ -79,24 +58,21 @@ namespace ATOMIC {
  *  }
  *                                                                                          \endcode
  */
-template<typename OBJECT, unsigned int Capacity, unsigned int CounterBits=32, typename STATS=NULLSTATS>
- class /*<UTILITY>*/ FIXED_LIFO
+template< typename OBJECT, unsigned int Capacity, unsigned int CounterBits = 32, typename STATS = NULLSTATS >
+class /*<UTILITY>*/ FIXED_LIFO
 {
   public:
     /*!
      * Construct a new (empty) queue.  This method is NOT atomic.
      */
-    FIXED_LIFO(STATS *stats=0) : _activeQueue(&_elementHeap, stats), _freeQueue(&_elementHeap, stats)
-    {
-        ClearNonAtomic();
-    }
+    FIXED_LIFO(STATS* stats = 0) : _activeQueue(&_elementHeap, stats), _freeQueue(&_elementHeap, stats) { ClearNonAtomic(); }
 
     /*!
      * Set the statistics collection object.  This method is NOT atomic.
      *
      *  @param[in] stats    The new statistics collection object.
      */
-    void SetStatsNonAtomic(STATS *stats)
+    void SetStatsNonAtomic(STATS* stats)
     {
         _activeQueue.SetStatsNonAtomic(stats);
         _freeQueue.SetStatsNonAtomic(stats);
@@ -108,8 +84,8 @@ template<typename OBJECT, unsigned int Capacity, unsigned int CounterBits=32, ty
     void ClearNonAtomic()
     {
         unsigned int i = 0;
-        for (i = 0;  i+1 < Capacity;  i++)
-            _elementHeap._elements[i]._next = &_elementHeap._elements[i+1];
+        for (i = 0; i + 1 < Capacity; i++)
+            _elementHeap._elements[i]._next = &_elementHeap._elements[i + 1];
         _elementHeap._elements[i]._next = 0;
 
         _activeQueue.AssignNonAtomic(0);
@@ -125,23 +101,22 @@ template<typename OBJECT, unsigned int Capacity, unsigned int CounterBits=32, ty
      *
      * @return  Returns a reference to the copied-to queue.
      */
-    FIXED_LIFO& operator=(const FIXED_LIFO &src)
+    FIXED_LIFO& operator=(const FIXED_LIFO& src)
     {
         unsigned int i;
 
         // Link all of our _elements[] into a list.
         //
-        for (i = 0;  i < Capacity-1;  i++)
-            _elementHeap._elements[i]._next = &_elementHeap._elements[i+1];
+        for (i = 0; i < Capacity - 1; i++)
+            _elementHeap._elements[i]._next = &_elementHeap._elements[i + 1];
         _elementHeap._elements[i]._next = 0;
 
         // Copy each allocated element from 'src' into our list.
         //
         i = 0;
-        for (const ELEMENT *element = src._activeQueue.Head();  element;  element = element->_next)
+        for (const ELEMENT* element = src._activeQueue.Head(); element; element = element->_next)
             _elementHeap._elements[i++]._obj = element->_obj;
-        if (i > 0)
-            _elementHeap._elements[i-1]._next = 0;
+        if (i > 0) _elementHeap._elements[i - 1]._next = 0;
         ATOMIC_CHECK_ASSERT(i <= Capacity);
 
         // Set up the active and free queues.
@@ -166,11 +141,10 @@ template<typename OBJECT, unsigned int Capacity, unsigned int CounterBits=32, ty
      *
      * @return  Returns TRUE on success, FALSE if the queue's capacity would be exceeded.
      */
-    bool Push(const OBJECT &userObj)
+    bool Push(const OBJECT& userObj)
     {
-        ELEMENT *element = _freeQueue.Pop();
-        if (!element)
-            return false;
+        ELEMENT* element = _freeQueue.Pop();
+        if (!element) return false;
 
         element->_obj = userObj;
 
@@ -185,11 +159,10 @@ template<typename OBJECT, unsigned int Capacity, unsigned int CounterBits=32, ty
      *
      * @return  Returns TRUE if there is an object to pop.  Returns FALSE if the queue is empty.
      */
-    bool Pop(OBJECT *userObj)
+    bool Pop(OBJECT* userObj)
     {
-        ELEMENT *element = _activeQueue.Pop();
-        if (!element)
-            return false;
+        ELEMENT* element = _activeQueue.Pop();
+        if (!element) return false;
 
         *userObj = element->_obj;
 
@@ -204,7 +177,7 @@ template<typename OBJECT, unsigned int Capacity, unsigned int CounterBits=32, ty
      */
     bool Empty() const
     {
-        const ELEMENT *head = _activeQueue.Head();
+        const ELEMENT* head = _activeQueue.Head();
         return (head == 0);
     }
 
@@ -219,15 +192,15 @@ template<typename OBJECT, unsigned int Capacity, unsigned int CounterBits=32, ty
      *
      * @return  The number of elements copied to \a container.
      */
-    template<typename Container> unsigned MoveToContainer(Container *container)
+    template< typename Container > unsigned MoveToContainer(Container* container)
     {
         unsigned count = 0;
 
-        ELEMENT *element = _activeQueue.Clear();
+        ELEMENT* element = _activeQueue.Clear();
         while (element)
         {
             container->push_back(element->_obj);
-            ELEMENT *next = element->_next;
+            ELEMENT* next = element->_next;
             _freeQueue.Push(element);
             element = next;
             count++;
@@ -250,9 +223,9 @@ template<typename OBJECT, unsigned int Capacity, unsigned int CounterBits=32, ty
      *                             queue elements.  The container must implement the
      *                             "push_back" method with the normal STL semantics.
      */
-    template<typename Container> void CopyPointersToContainerNonAtomic(Container *container) const
+    template< typename Container > void CopyPointersToContainerNonAtomic(Container* container) const
     {
-        const ELEMENT *element = _activeQueue.Head();
+        const ELEMENT* element = _activeQueue.Head();
         while (element)
         {
             container->push_back(&element->_obj);
@@ -263,24 +236,22 @@ template<typename OBJECT, unsigned int Capacity, unsigned int CounterBits=32, ty
   private:
     struct ELEMENT
     {
-        ELEMENT * volatile _next;
+        ELEMENT* volatile _next;
         OBJECT _obj;
     };
 
     struct ELEMENT_HEAP
     {
-        FUND::UINT32 Index(const ELEMENT *element) const
+        UINT32 Index(const ELEMENT* element) const
         {
-            if (!element)
-                return 0;
+            if (!element) return 0;
             return (element - _elements) + 1;
         }
-    
-        ELEMENT *Pointer(FUND::UINT32 iElement)
+
+        ELEMENT* Pointer(UINT32 iElement)
         {
-            if (!iElement)
-                return 0;
-            return &_elements[iElement-1];
+            if (!iElement) return 0;
+            return &_elements[iElement - 1];
         }
 
         ELEMENT _elements[Capacity];
@@ -288,14 +259,14 @@ template<typename OBJECT, unsigned int Capacity, unsigned int CounterBits=32, ty
 
     ELEMENT_HEAP _elementHeap;
 
-    static const FUND::UINT32 CapacityBits = UTIL::NUMBER_BITS<Capacity>::count;
+    static const UINT32 CapacityBits = UTIL::NUMBER_BITS< Capacity >::count;
 
     // _activeQueue is a list of objects that are "in" the FIXED_LIFO.  _freeQueue is a list
     // of unused ELEMENT's.
     //
-    LIFO_CTR<ELEMENT, ELEMENT_HEAP, CapacityBits, CounterBits, FUND::UINT64, STATS> _activeQueue;
-    LIFO_CTR<ELEMENT, ELEMENT_HEAP, CapacityBits, CounterBits, FUND::UINT64, STATS> _freeQueue;
+    LIFO_CTR< ELEMENT, ELEMENT_HEAP, CapacityBits, CounterBits, UINT64, STATS > _activeQueue;
+    LIFO_CTR< ELEMENT, ELEMENT_HEAP, CapacityBits, CounterBits, UINT64, STATS > _freeQueue;
 };
 
-} // namespace
+} // namespace ATOMIC
 #endif // file guard

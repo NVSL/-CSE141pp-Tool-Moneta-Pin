@@ -1,33 +1,14 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * Check that we get the correct effective addresses for pop ops where the stack pointer
  * is part of the address.
@@ -43,11 +24,12 @@ END_LEGAL */
 #include <stdio.h>
 #include <stdlib.h>
 #include "pin.H"
+using std::string;
 
-KNOB<BOOL>   KnobTrace(KNOB_MODE_WRITEONCE, "pintool", "t", "0", "trace memory addresses of interest");
-KNOB<string> KnobOutput(KNOB_MODE_WRITEONCE,"pintool", "o", "popea_verifier.out", "Name for log file");
+KNOB< BOOL > KnobTrace(KNOB_MODE_WRITEONCE, "pintool", "t", "0", "trace memory addresses of interest");
+KNOB< string > KnobOutput(KNOB_MODE_WRITEONCE, "pintool", "o", "popea_verifier.out", "Name for log file");
 
-static FILE *trace = NULL;
+static FILE* trace = NULL;
 
 static UINT32 fails = 0;
 static UINT32 tests = 0;
@@ -57,53 +39,54 @@ static UINT32 tests = 0;
  * We're only looking at pop offset(%esp) instructions.
  */
 
-static VOID validateWriteAddress (ADDRINT ip, ADDRINT writeAddr, ADDRINT esp, ADDRDELTA offset, UINT32 operandSize)
+static VOID validateWriteAddress(ADDRINT ip, ADDRINT writeAddr, ADDRINT esp, ADDRDELTA offset, UINT32 operandSize)
 {
-    ADDRINT expectedAddress = esp+operandSize+offset; /* ESP is incremented *BEFORE* it is used in addressing */
-    
+    ADDRINT expectedAddress = esp + operandSize + offset; /* ESP is incremented *BEFORE* it is used in addressing */
+
     if (writeAddr != expectedAddress)
     {
-        fprintf (trace, "%p: EA %p should be %p\n", (void*)ip, (void*)writeAddr, (void*)expectedAddress);
+        fprintf(trace, "%p: EA %p should be %p\n", (void*)ip, (void*)writeAddr, (void*)expectedAddress);
         fails++;
     }
     else if (KnobTrace)
     {
-        fprintf (trace, "%p: EA %p OK\n", (void*)ip, (void*)writeAddr);
+        fprintf(trace, "%p: EA %p OK\n", (void*)ip, (void*)writeAddr);
     }
     tests++;
 }
 
-static VOID RewriteIns(INS ins, VOID *)
+static VOID RewriteIns(INS ins, VOID*)
 {
-    if (INS_Opcode(ins) != XED_ICLASS_POP)
-        return;
-    
-    if (!INS_IsMemoryWrite(ins))
-        return;
+    if (INS_Opcode(ins) != XED_ICLASS_POP) return;
 
-    if (INS_MemoryBaseReg(ins) != REG_STACK_PTR)
-        return;
+    if (!INS_IsMemoryWrite(ins)) return;
+
+    if (INS_MemoryBaseReg(ins) != REG_STACK_PTR) return;
+
+    UINT32 readSize = 0;
+    for (UINT32 opIdx = 0; opIdx < INS_MemoryOperandCount(ins); opIdx++)
+    {
+        if (INS_MemoryOperandIsRead(ins, opIdx))
+        {
+            readSize = INS_MemoryOperandSize(ins, opIdx);
+            break;
+        }
+    }
 
     // If we get here we have a pop into a stack pointer relative address.
     ADDRDELTA offset = INS_MemoryDisplacement(ins);
-    INS_InsertCall(ins, IPOINT_BEFORE,
-                   AFUNPTR(validateWriteAddress),
-                   IARG_INST_PTR,
-                   IARG_MEMORYWRITE_EA,
-                   IARG_REG_VALUE, REG_STACK_PTR,
-                   IARG_ADDRINT, offset,
-                   IARG_UINT32, INS_MemoryReadSize(ins), 
-                   IARG_END);
+    INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(validateWriteAddress), IARG_INST_PTR, IARG_MEMORYWRITE_EA, IARG_REG_VALUE,
+                   REG_STACK_PTR, IARG_ADDRINT, offset, IARG_UINT32, readSize, IARG_END);
 }
 
-void AtEnd(INT32 code, VOID *arg)
+void AtEnd(INT32 code, VOID* arg)
 {
-    fprintf (trace, "Tested: %d, failed: %d\n", tests, fails);
+    fprintf(trace, "Tested: %d, failed: %d\n", tests, fails);
     fclose(trace);
-    exit (fails);
+    exit(fails);
 }
 
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
     PIN_InitSymbols();
     PIN_Init(argc, argv);
@@ -120,6 +103,6 @@ int main(int argc, char * argv[])
 
     // Never returns
     PIN_StartProgram();
-    
+
     return 0;
 }

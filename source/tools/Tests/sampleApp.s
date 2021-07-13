@@ -1,3 +1,14 @@
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 	.intel_syntax noprefix
 	.text
 # RTN of size 200000 tickled a bug in symbol handling	
@@ -33,6 +44,7 @@ loop3:
 	ret
 
 xlat:
+#ifdef TARGET_IA32
 	movb [table+0],0
 	movb [table+1],1
 	movb [table+2],2
@@ -40,6 +52,15 @@ xlat:
 	movb [table+256+1],8
 	movb [table+256+2],9
 	lea ebx,[table]
+#else
+	movb [rip+table+0],0
+	movb [rip+table+1],1
+	movb [rip+table+2],2
+	movb [rip+table+256+0],7
+	movb [rip+table+256+1],8
+	movb [rip+table+256+2],9
+	lea rbx,[rip+table]
+#endif
 	mov eax,256+1
 	xlat
 	ret

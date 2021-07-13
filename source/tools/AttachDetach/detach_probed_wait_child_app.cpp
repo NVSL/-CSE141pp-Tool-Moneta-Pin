@@ -1,33 +1,14 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * This test checks a problem that occured while Pin was detaching from an application in probe mode. Pin spawns a
  * detach thread for doing the detach work and creates a child process for stopping the applicaiton while the detach
@@ -57,32 +38,38 @@ END_LEGAL */
 using std::string;
 
 // return values for parent and child
-enum retValues {         // VALUE   DESCRIPTION                                             WHO RETURNS THIS
+enum retValues
+{ // VALUE   DESCRIPTION                                             WHO RETURNS THIS
 
-    RET_SUCCESS = 0,     //   0     everything is OK                                        both parent and child
-    RET_PIPE_ERROR,      //   1     pipe creation failed                                    parent
-    RET_FORK_ERROR,      //   2     fork system call failed                                 parent
-    RET_READ_ERROR,      //   3     read system call failed                                 child
-    RET_WAIT_ERROR,      //   4     wait system call failed with errno other than EINTR     parent
-    RET_ILLEGAL_CHILD    //   5     wait returned with pid other than the child             parent
+    RET_SUCCESS = 0,  //   0     everything is OK                                        both parent and child
+    RET_PIPE_ERROR,   //   1     pipe creation failed                                    parent
+    RET_FORK_ERROR,   //   2     fork system call failed                                 parent
+    RET_READ_ERROR,   //   3     read system call failed                                 child
+    RET_WAIT_ERROR,   //   4     wait system call failed with errno other than EINTR     parent
+    RET_ILLEGAL_CHILD //   5     wait returned with pid other than the child             parent
 };
 
-const int READ = 0;
+const int READ  = 0;
 const int WRITE = 1;
 
+#ifdef TARGET_LINUX
+#define WAITPID_FLAGS (__WCLONE | __WALL)
+#elif defined(TARGET_MAC)
+#define WAITPID_FLAGS 0
+#endif
+
 // This function is replaced by the tool. When it is called, it detaches Pin.
-extern "C" void TellPinToDetach(unsigned long *updateWhenReady)
-{
-    return;
-}
+extern "C" void TellPinToDetach(unsigned long* updateWhenReady) { return; }
 
 // The child waits for the secondary thread to release it from the read() system call.
 // This will (hopefully) allow the parent to wait for any unexpceted child processes spawned by Pin.
-int doChild(int fd[]) {
+int doChild(int fd[])
+{
     close(fd[WRITE]);
-    char buf [2];
+    char buf[2];
     int res = RET_SUCCESS;
-    if (read(fd[READ], buf, 1) < 0) { // Wait here until detach is complete
+    if (read(fd[READ], buf, 1) < 0)
+    { // Wait here until detach is complete
         perror("CHILD APP ERROR: read failed");
         res = RET_READ_ERROR;
     }
@@ -91,10 +78,12 @@ int doChild(int fd[]) {
 }
 
 // The secondary thread detaches Pin and only then releases the child process by closing the pipe.
-void* doSecondaryThread(void* fd) {
+void* doSecondaryThread(void* fd)
+{
     unsigned long pinDetached = false; // This will change to true by the tool after Pin has detached
     TellPinToDetach(&pinDetached);
-    while (!pinDetached) {
+    while (!pinDetached)
+    {
         sched_yield();
     }
     close(((int*)fd)[WRITE]); // Close the WRITE end of the pipe to release the child
@@ -104,51 +93,62 @@ void* doSecondaryThread(void* fd) {
 // The parent spawns a secondary thread that synchronizes Pin's detach and the child's exit.
 // After spawning the thread, the main thread waits until the child exits. If for any reason,
 // it gets a different child process, an error is printed.
-int doParent(pid_t child, int fd[]) {
+int doParent(pid_t child, int fd[])
+{
     close(fd[READ]);
     int status;
     pid_t retCh = -1;
     pthread_t secTh;
-    pthread_create (&secTh, 0, doSecondaryThread, fd);
-    do {
-        retCh = waitpid(0, &status, __WCLONE | __WALL);
-        if (retCh < 0) { // handle system call error
-            if (errno == EINTR) {
+    pthread_create(&secTh, 0, doSecondaryThread, fd);
+    do
+    {
+        retCh = waitpid(0, &status, WAITPID_FLAGS);
+        if (retCh < 0)
+        { // handle system call error
+            if (errno == EINTR)
+            {
                 continue;
             }
             perror("PARENT APP ERROR: wait failed");
             return RET_WAIT_ERROR;
         }
-        else if (retCh != child) { // this means that we got a child created by Pin - not good!
+        else if (retCh != child)
+        { // this means that we got a child created by Pin - not good!
             fprintf(stderr, "PARENT APP ERROR: wait returned with pid: %d, expecting child: %d\n", retCh, child);
             return RET_ILLEGAL_CHILD;
         }
-    } while (!WIFEXITED(status));
-    
+    }
+    while (!WIFEXITED(status));
+
     pthread_join(secTh, 0);
-    
+
     return RET_SUCCESS;
 }
 
-int main() {
+int main()
+{
     int fd[2];
-    
-    if (pipe(fd) != 0) {
+
+    if (pipe(fd) != 0)
+    {
         perror("PARENT APP ERROR: pipe creation failed");
         return RET_PIPE_ERROR;
     }
-    
+
     pid_t child = fork();
-    
-    if (child < 0) {
+
+    if (child < 0)
+    {
         perror("PARENT APP ERROR: fork failed");
         return RET_FORK_ERROR;
     }
-    
-    if (child == 0) { // child's code
+
+    if (child == 0)
+    { // child's code
         return doChild(fd);
     }
-    else { // parent's code
+    else
+    { // parent's code
         return doParent(child, fd);
     }
 }

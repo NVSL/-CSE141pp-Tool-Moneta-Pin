@@ -23,20 +23,15 @@
 # defining the test name twice (once in TOOL_ROOTS and again in TEST_ROOTS).
 # Tests defined here should not be defined in TOOL_ROOTS and TEST_ROOTS.
 TEST_TOOL_ROOTS := sigsuspend double recursive setcontext sigusr2 sigenable interceptall faulttool action-pending \
-                   interceptsegv resetsegv-safecopy deprecated-intercept
+                   interceptsegv resetsegv-safecopy
 
 # This defines the tests to be run that were not already defined in TEST_TOOL_ROOTS.
 TEST_ROOTS := nestmask altstack errcheck fatallog sigcont fastsigcheck sigprocmask_short sig64 fatalsync futex maskcheck \
               suspendmask fatal_block_sync simpleasync simplesync fpcheck movsbtest_$(TARGET) sigflowcheck2 syncasync \
               interceptsegv_for_regbindings_cache intercept sigflowcheck1 resetcont log inst-type blockingsyscall \
               then-stress faultcheck-pressure segv_on_fetch replay-signal bad-stack-noalt bad-stack-alt bad-stack-sigret \
-              call-app call-app-stress xmmcheck_$(TARGET) xmmfaultcheck_$(TARGET) alternate_stack_fork alternate_stack_thread
-
-# This defines a list of tests that should run in the "short" sanity. Tests in this list must also
-# appear either in the TEST_TOOL_ROOTS or the TEST_ROOTS list.
-# If the entire directory should be tested in sanity, assign TEST_TOOL_ROOTS and TEST_ROOTS to the
-# SANITY_SUBSET variable in the tests section below (see example in makefile.rules.tmpl).
-SANITY_SUBSET :=
+              call-app call-app-stress xmmcheck_$(TARGET) xmmfaultcheck_$(TARGET) alternate_stack_fork alternate_stack_thread \
+              async_exceptions blocked_async_exceptions
 
 # This defines the tools which will be run during the the tests, and were not already defined in
 # TEST_TOOL_ROOTS.
@@ -48,9 +43,9 @@ TOOL_ROOTS := syncasynctool exittool logtool intercepttool sigflowcheck spilltoo
 # This defines all the applications that will be run during the tests.
 APP_ROOTS := simple nestmask syncasyncapp fpcheck maskcheck segv blockloop exithandler altstack errcheck fatal sigcont \
              sigenableapp sigprocmask_short sig64 fatalsync blockingsyscall futex asyncfpe fatal_block_sync suspendmask \
-             efault shortmask segv_for_regbindings_cache_test resetsegv movsbtest_$(TARGET) resetcont handle-usr1 \
+             efault shortmask segv_for_regbindings_cache_test resetsegv movsbtest_$(TARGET) resetcont \
              inst-type-app then-stress-app segv_on_fetch replay-signal-app call-app call-app-stress xmmcheck_$(TARGET) \
-             xmmfaultcheck_$(TARGET) movsbtest_$(TARGET) forktest_altstack threadtest_altstack
+             xmmfaultcheck_$(TARGET) forktest_altstack threadtest_altstack async_exceptions
 
 # This defines any additional object files that need to be compiled.
 OBJECT_ROOTS :=
@@ -78,24 +73,6 @@ endif
 
 ###### Place OS-specific definitions here ######
 
-# Android
-ifeq ($(TARGET_OS),android)
-    TEST_ROOTS += mtstress resetsegv efault async_multithreading asyncfpe shortmask
-    TOOL_ROOTS += raise-exception-tool
-    APP_ROOTS += async_multithreadingapp mtstress
-    ifeq ($(TARGET),ia32)
-        TEST_ROOTS += raise-exception-ia32 raise-exception-ia32-const-context handlerAlignment
-        APP_ROOTS += handlerAlignment
-        OBJECT_ROOTS += handlerAlignment_asm
-    endif
-    ifeq ($(TARGET),ia32)
-        ifeq ($(NDK_VERSION),10)
-           TEST_ROOTS += hlt_pie
-           APP_ROOTS += hlt_pie
-        endif
-    endif
-endif
-
 # Linux
 ifeq ($(TARGET_OS),linux)
     TEST_ROOTS += mtstress resetsegv efault async_multithreading asyncfpe shortmask
@@ -111,15 +88,18 @@ ifeq ($(TARGET_OS),linux)
                       raise-exception-intel64-const-context
         APP_ROOTS += dfcheck_intel64 insfault
     endif 
+    ifeq ($(ATTACH),1)
+        TEST_TOOL_ROOTS += sigsegv_attach
+        APP_ROOTS += sigsegv_attach_app
+    endif
 endif
 
-###### Handle exceptions here ######
+###### Handle exceptions here (OS/arch related) ######
 
 # Windows does not have signals, therefore don't test this directory on that OS.
 ifeq ($(TARGET_OS),windows)
     TEST_TOOL_ROOTS :=
     TEST_ROOTS :=
-    SANITY_SUBSET :=
     TOOL_ROOTS :=
     SA_TOOL_ROOTS :=
     APP_ROOTS :=
@@ -128,66 +108,43 @@ ifeq ($(TARGET_OS),windows)
     LIB_ROOTS := 
 endif
 
-# KNC does not support SSE, therefore don't test the following on that platform.
-ifeq ($(TARGET),mic)
-    TEST_ROOTS := $(filter-out xmmcheck_$(TARGET) xmmfaultcheck_$(TARGET), $(TEST_ROOTS))
-    APP_ROOTS := $(filter-out xmmcheck_$(TARGET) xmmfaultcheck_$(TARGET), $(APP_ROOTS))
-endif
+RUNNABLE_TESTS := $(TEST_TOOL_ROOTS) $(TEST_ROOTS)
 
-# TODO: These tests fail - fix and remove the following:
-# See Mantis 3087
-ifeq ($(TARGET),mic)
-    TEST_TOOL_ROOTS := $(filter-out action-pending interceptsegv deprecated-intercept, $(TEST_TOOL_ROOTS))
-    TEST_ROOTS := $(filter-out inst-type asyncfpe bad-stack-sigret maskcheck async_multithreading simpleasync resetcont \
-                               bad-stack-alt call-app sig64 log resetsegv altstack bad-stack-noalt fpcheck suspendmask \
-                               sigflowcheck2 faultcheck-pressure replay-signal futex movsbtest_mic fastsigcheck syncasync \
-                               then-stress nestmask mtstress sigflowcheck1 simplesync interceptsegv_for_regbindings_cache \
-                               blockingsyscall call-app-stress, $(TEST_ROOTS))
-endif
-
-# TODO: These tests fail - fix and remove the following:
-
-# These tests are disabled on Android:
-ifeq ($(TARGET_OS),android)
-    # intercept test hangs on Android because of a makefile issue - see Mantis 2877.
-    # fastsigcheck,interceptsegv,then-stress fails on Android because of makefile issues - see Mantis 2877.
-    # See Mantis 2907 for: suspendmask sigaltstack
-    # See mantis 2996 for call-app-stress
-    TEST_TOOL_ROOTS := $(filter-out interceptsegv deprecated-intercept, $(TEST_TOOL_ROOTS))
-    TEST_ROOTS := $(filter-out sigaltstack suspendmask intercept fastsigcheck then-stress async_multithreading \
-                               call-app-stress raise-exception-ia32 raise-exception-ia32-const-context, $(TEST_ROOTS))
-    TOOL_ROOTS := $(filter-out intercepttool then-stress-tool, $(TOOL_ROOTS))
-    APP_ROOTS := $(filter-out then-stress-app sigaltstack async_multithreadingapp, $(APP_ROOTS))
-    ifeq ($(TARGET),ia32)
-        ifeq ($(NDK_VERSION),10)
-           TEST_ROOTS := $(filter-out hlt, $(TEST_ROOTS))
-           APP_ROOTS := $(filter-out hlt, $(APP_ROOTS))
-        endif
-    endif
-endif
+###### Handle exceptions here (bugs related) ######
 
 # The following tests are disabled. See Mantis #443.
 TEST_TOOL_ROOTS := $(filter-out sigsuspend double recursive setcontext sigusr2, $(TEST_TOOL_ROOTS))
 
+# See Mantis 4053
+ifeq ($(TARGET_OS),linux)
+    TEST_ROOTS := $(filter-out mtstress, $(TEST_ROOTS))
+    APP_ROOTS := $(filter-out mtstress, $(APP_ROOTS))
+endif
 
-#filter out tests that fail on old kernel, since we decided to overlook this bug in red-hat 4
-ifeq ($(TARGET_OS), linux)
-    KERNEL_LESS_THAN_2_6_16 := $(shell python $(TOOLS_ROOT)/Utils/testReleaseVersionPython.py 2.6.16)
-    ifeq ($(KERNEL_LESS_THAN_2_6_16),1)
-        TEST_ROOTS := $(filter-out alternate_stack_thread, $(TEST_ROOTS))
-        APP_ROOTS := $(filter-out threadtest_altstack, $(APP_ROOTS))
+BINUTILS_GE_235 := $(shell $(TOOLS_ROOT)/Utils/testToolVersion `which ld` ge 2.35)
+
+# Mantis 4874
+ifeq ($(TARGET_OS),linux)
+    ifeq ($(TARGET),intel64)
+        ifeq ($(BINUTILS_GE_235),1)
+            TEST_ROOTS := $(filter-out faultcheck-pressure faultcheck-intel64 \
+                            raise-exception-intel64 raise-exception-intel64-const-context , $(TEST_ROOTS))
+            APP_ROOTS := $(filter-out faultcheck-intel64, $(APP_ROOTS))
+        endif
     endif
 endif
+
+###### Define the sanity subset ######
+
+# This defines the list of tests that should run in sanity. It should include all the tests listed in
+# TEST_TOOL_ROOTS and TEST_ROOTS excluding only unstable tests.
+SANITY_SUBSET := $(TEST_TOOL_ROOTS) $(TEST_ROOTS)
 
 ##############################################################
 #
 # Test recipes
 #
 ##############################################################
-
-###### Finalize sanity here ######
-
-SANITY_SUBSET := $(TEST_TOOL_ROOTS) $(TEST_ROOTS)
 
 # This section contains recipes for tests other than the default.
 # See makefile.default.rules for the default test rules.
@@ -344,16 +301,16 @@ double.test: $(OBJDIR)double$(EXE_SUFFIX)
 	$(RM) $(OBJDIR)double.out $(OBJDIR)double.pin.out
 
 hlt.test: $(OBJDIR)hlt$(EXE_SUFFIX)
-	$(OBJDIR)hlt$(EXE_SUFFIX) > $(OBJDIR)hlt.out
-	$(PIN) -- $(OBJDIR)hlt$(EXE_SUFFIX) > $(OBJDIR)hlt.pin.out
-	$(CMP) $(OBJDIR)hlt.out $(OBJDIR)hlt.pin.out
-	$(RM) $(OBJDIR)hlt.out $(OBJDIR)hlt.pin.out
+	$(OBJDIR)hlt$(EXE_SUFFIX) > $(OBJDIR)$(@:.test=.app.out)
+	$(PIN) -- $(OBJDIR)hlt$(EXE_SUFFIX) > $(OBJDIR)$(@:.test=.out)
+	$(CMP) $(OBJDIR)$(@:.test=.app.out) $(OBJDIR)$(@:.test=.out)
+	$(RM) $(OBJDIR)$(@:.test=.app.out) $(OBJDIR)$(@:.test=.out)
 
 hlt_pie.test: $(OBJDIR)hlt_pie$(EXE_SUFFIX)
-	$(DISABLE_ASLR) $(OBJDIR)hlt_pie$(EXE_SUFFIX) > $(OBJDIR)hlt.out
-	$(DISABLE_ASLR) $(PIN) -- $(OBJDIR)hlt_pie$(EXE_SUFFIX) > $(OBJDIR)hlt.pin.out
-	$(CMP) $(OBJDIR)hlt.out $(OBJDIR)hlt.pin.out
-	$(RM) $(OBJDIR)hlt.out $(OBJDIR)hlt.pin.out
+	$(DISABLE_ASLR) $(OBJDIR)hlt_pie$(EXE_SUFFIX) > $(OBJDIR)$(@:.test=.app.out)
+	$(DISABLE_ASLR) $(PIN) -- $(OBJDIR)hlt_pie$(EXE_SUFFIX) > $(OBJDIR)$(@:.test=.out)
+	$(CMP) $(OBJDIR)$(@:.test=.app.out) $(OBJDIR)$(@:.test=.out)
+	$(RM) $(OBJDIR)$(@:.test=.app.out) $(OBJDIR)$(@:.test=.out)
 
 recursive.test: $(OBJDIR)recursive$(EXE_SUFFIX)
 	$(OBJDIR)recursive$(EXE_SUFFIX) > $(OBJDIR)recursive.out
@@ -432,6 +389,12 @@ blockingsyscall.test: $(OBJDIR)blockingsyscall$(EXE_SUFFIX)
 futex.test: $(OBJDIR)futex$(EXE_SUFFIX)
 	$(PIN) -- $(OBJDIR)futex$(EXE_SUFFIX)
 
+async_exceptions.test: $(OBJDIR)async_exceptions$(EXE_SUFFIX)
+	$(PIN) -- $(OBJDIR)async_exceptions$(EXE_SUFFIX)
+
+blocked_async_exceptions.test: $(OBJDIR)async_exceptions$(EXE_SUFFIX)
+	$(PIN) -- $(OBJDIR)async_exceptions$(EXE_SUFFIX) 1
+
 fptags_ia32.test: $(OBJDIR)fptags_ia32$(EXE_SUFFIX)
 	$(PIN) -- $(OBJDIR)fptags_ia32$(EXE_SUFFIX)
 
@@ -492,8 +455,7 @@ shortmask.test: $(OBJDIR)shortmask$(EXE_SUFFIX)
 action-pending.test: $(OBJDIR)simple$(EXE_SUFFIX) $(OBJDIR)action-pending$(PINTOOL_SUFFIX)
 	$(PIN) -t $(OBJDIR)action-pending$(PINTOOL_SUFFIX) -- $(OBJDIR)simple$(EXE_SUFFIX)
 
-# Test the PIN_ReplayUnixSignal() API.  This test is disabled on IA64 because it uses IARG_CONTEXT,
-# which isn't implemented there.
+# Test the PIN_ReplayUnixSignal() API.
 #
 replay-signal.test: $(OBJDIR)replay-signal-app$(EXE_SUFFIX) $(OBJDIR)replay-signal-tool$(PINTOOL_SUFFIX)
 	$(PIN) -t $(OBJDIR)replay-signal-tool$(PINTOOL_SUFFIX) \
@@ -525,27 +487,6 @@ resetcont.test: $(OBJDIR)resetcont$(EXE_SUFFIX) $(OBJDIR)logtool$(PINTOOL_SUFFIX
 #
 resetsegv-safecopy.test: $(OBJDIR)resetsegv$(EXE_SUFFIX) $(OBJDIR)resetsegv-safecopy$(PINTOOL_SUFFIX)
 	$(PIN) -t $(OBJDIR)resetsegv-safecopy$(PINTOOL_SUFFIX) -- $(OBJDIR)resetsegv$(EXE_SUFFIX)
-
-# Test the deprecated PIN_AddSignalInterceptFunction() function.
-#
-deprecated-intercept.test: $(OBJDIR)handle-usr1$(EXE_SUFFIX) $(OBJDIR)deprecated-intercept$(PINTOOL_SUFFIX)
-	$(PIN) -t $(OBJDIR)deprecated-intercept$(PINTOOL_SUFFIX) -o $(OBJDIR)deprecated-intercept.pass-handle.toolout \
-	  -p -- $(OBJDIR)handle-usr1$(EXE_SUFFIX) yes > $(OBJDIR)deprecated-intercept.pass-handle.out
-	$(CMP) $(OBJDIR)deprecated-intercept.pass-handle.toolout deprecated-intercept.tool.reference
-	$(CMP) $(OBJDIR)deprecated-intercept.pass-handle.out deprecated-intercept.app-handle.reference
-	$(PIN) -t $(OBJDIR)deprecated-intercept$(PINTOOL_SUFFIX) -o $(OBJDIR)deprecated-intercept.nopass-handle.toolout \
-	  -- $(OBJDIR)handle-usr1$(EXE_SUFFIX) yes > $(OBJDIR)deprecated-intercept.nopass-handle.out
-	$(CMP) $(OBJDIR)deprecated-intercept.nopass-handle.toolout deprecated-intercept.tool.reference
-	$(CMP) $(OBJDIR)deprecated-intercept.nopass-handle.out deprecated-intercept.app-nohandle.reference
-	$(PIN) -t $(OBJDIR)deprecated-intercept$(PINTOOL_SUFFIX) -o $(OBJDIR)deprecated-intercept.pass-nohandle.toolout \
-	  -p -- $(OBJDIR)handle-usr1$(EXE_SUFFIX) no > $(OBJDIR)deprecated-intercept.pass-nohandle.out
-	$(CMP) $(OBJDIR)deprecated-intercept.pass-nohandle.toolout deprecated-intercept.tool.reference
-	$(CMP) $(OBJDIR)deprecated-intercept.pass-nohandle.out deprecated-intercept.app-nohandle.reference
-	$(PIN) -t $(OBJDIR)deprecated-intercept$(PINTOOL_SUFFIX) -o $(OBJDIR)deprecated-intercept.nopass-nohandle.toolout \
-	  -- $(OBJDIR)handle-usr1$(EXE_SUFFIX) no > $(OBJDIR)deprecated-intercept.nopass-nohandle.out
-	$(CMP) $(OBJDIR)deprecated-intercept.nopass-nohandle.toolout deprecated-intercept.tool.reference
-	$(CMP) $(OBJDIR)deprecated-intercept.nopass-nohandle.out deprecated-intercept.app-nohandle.reference
-	$(RM) $(OBJDIR)deprecated-intercept.*.toolout $(OBJDIR)deprecated-intercept.*.out
 
 # Test the behavior when a signal cannot be handled because the application's stack is bad.
 #
@@ -678,17 +619,25 @@ faultcheck-pressure.test: $(OBJDIR)faultcheck-$(TARGET)$(EXE_SUFFIX) $(OBJDIR)re
 	$(RM) $(OBJDIR)faultcheck-pressure.out $(OBJDIR)faultcheck-pressure.pin.out
 
 alternate_stack_fork.test: $(OBJDIR)forktest_altstack$(EXE_SUFFIX)
-	$(OBJDIR)forktest_altstack$(EXE_SUFFIX) $(OBJDIR)forktest_altstack.log 2>  $(OBJDIR)alternate_stack_fork.out
-	$(PIN) -- $(OBJDIR)forktest_altstack$(EXE_SUFFIX) $(OBJDIR)forktest_altstack.log 2>  $(OBJDIR)alternate_stack_fork.pin.out 
+	$(OBJDIR)forktest_altstack$(EXE_SUFFIX) $(OBJDIR)alternate_stack_fork.log 2>  $(OBJDIR)alternate_stack_fork.out
+	$(PIN) -- $(OBJDIR)forktest_altstack$(EXE_SUFFIX) $(OBJDIR)alternate_stack_fork.pin.log \
+	  2> $(OBJDIR)alternate_stack_fork.pin.out 
 	$(SYNC)
 	$(CMP) $(OBJDIR)alternate_stack_fork.out $(OBJDIR)alternate_stack_fork.pin.out
-	$(RM) $(OBJDIR)alternate_stack_fork.out $(OBJDIR)alternate_stack_fork.pin.out $(OBJDIR)forktest_altstack.log
+	$(RM) $(OBJDIR)alternate_stack_fork.out $(OBJDIR)alternate_stack_fork.pin.out
+	$(RM) $(OBJDIR)alternate_stack_fork.log $(OBJDIR)alternate_stack_fork.pin.log
 
 alternate_stack_thread.test: $(OBJDIR)threadtest_altstack$(EXE_SUFFIX)
 	$(OBJDIR)threadtest_altstack$(EXE_SUFFIX) > $(OBJDIR)alternate_stack_thread.out
 	$(PIN) -- $(OBJDIR)threadtest_altstack$(EXE_SUFFIX) > $(OBJDIR)alternate_stack_thread.pin.out
 	$(CMP) $(OBJDIR)alternate_stack_thread.out $(OBJDIR)alternate_stack_thread.pin.out
 	$(RM) $(OBJDIR)alternate_stack_thread.out $(OBJDIR)alternate_stack_thread.pin.out threadtest_altstack.log
+
+sigsegv_attach.test: $(OBJDIR)sigsegv_attach$(PINTOOL_SUFFIX) $(OBJDIR)sigsegv_attach_app$(EXE_SUFFIX) $(ATTACH_LAUNCHER)
+	$(ATTACH_LAUNCHER) $(PIN) -t $(OBJDIR)sigsegv_attach$(PINTOOL_SUFFIX) \
+	    -- $(OBJDIR)sigsegv_attach_app$(EXE_SUFFIX) > $(OBJDIR)sigsegv_attach.out
+	$(QGREP) "Caught signal SIGSEGV" $(OBJDIR)sigsegv_attach.out
+	$(RM) $(OBJDIR)sigsegv_attach.out
 
 ##############################################################
 #
@@ -700,10 +649,6 @@ alternate_stack_thread.test: $(OBJDIR)threadtest_altstack$(EXE_SUFFIX)
 # See makefile.default.rules for the default build rules.
 
 ###### Special tools' build rules ######
-
-# This tool only needs a special compilation rule. For linking we use the default. 
-$(OBJDIR)deprecated-intercept$(OBJ_SUFFIX): deprecated-intercept.cpp
-	$(CXX) $(TOOL_CXXFLAGS) $(ENABLE_DEPRECATED) $(COMP_OBJ)$@ $<
 
 ###### Special applications' build rules ######
 
@@ -725,19 +670,16 @@ $(OBJDIR)sigaltstack$(EXE_SUFFIX): sigaltstack.c
 # PIE makes it difficult to compare the two runs, therefore turn off PIE
 $(OBJDIR)faultcheck-$(TARGET)$(EXE_SUFFIX): faultcheck.c faultcheck-x86.c faultcheck-$(TARGET)-asm$(ASM_SUFFIX)
 	$(APP_CC) $(APP_CXXFLAGS) $(COMP_EXE)$@ faultcheck.c faultcheck-x86.c $(ASMCPP) faultcheck-$(TARGET)-asm$(ASM_SUFFIX) \
-	  $(NO_PIE) $(APP_LDFLAGS) $(APP_LIBS)
+	  $(APP_LDFLAGS) $(LDFLAGS_DEFAULT_NO_PIE) $(APP_LIBS)
 
 $(OBJDIR)faultcheck_flags_ia32$(EXE_SUFFIX): faultcheck_flags.c  faultcheck_flags_ia32_asm$(ASM_SUFFIX)
 	$(APP_CC) $(APP_CXXFLAGS) $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
-$(OBJDIR)movsbtest_$(TARGET)$(EXE_SUFFIX): movsbtest.c movsbtest_$(TARGET)$(ASM_SUFFIX)
-	$(APP_CC) $(APP_CXXFLAGS) $(COMP_EXE)$@ movsbtest.c $(ASMCPP) movsbtest_$(TARGET)$(ASM_SUFFIX) $(APP_LDFLAGS) $(APP_LIBS)
+$(OBJDIR)movsbtest_$(TARGET)$(EXE_SUFFIX): movsbtest.c $(OBJDIR)movsbtest_asm$(OBJ_SUFFIX)
+	$(APP_CC) $(APP_CXXFLAGS) $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
 $(OBJDIR)hlt$(EXE_SUFFIX): hlt.c
-	$(APP_CC) $(APP_CXXFLAGS_NOOPT) $(COMP_EXE)$@ $< $(NO_PIE) $(APP_LDFLAGS_NOOPT)
-
-$(OBJDIR)hlt_pie$(EXE_SUFFIX): hlt.c
-	$(APP_CC) $(APP_CXXFLAGS_NOOPT) $(COMP_EXE)$@ $< $(APP_LDFLAGS_NOOPT)
+	$(APP_CC) $(APP_CXXFLAGS_NOOPT) $(COMP_EXE)$@ $< $(APP_LDFLAGS_NOOPT) $(LDFLAGS_DEFAULT_NO_PIE)
 
 $(OBJDIR)sigenableapp$(EXE_SUFFIX): sigenableapp.c sigenableapp2.c
 	$(APP_CC) $(APP_CXXFLAGS) $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
@@ -756,4 +698,7 @@ $(OBJDIR)insfault$(EXE_SUFFIX): insfault.cpp insfault-$(TARGET_OS)-$(TARGET).cpp
 	$(APP_CXX) $(COMPONENT_INCLUDES) $(APP_CXXFLAGS) $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS)
 
 $(OBJDIR)handlerAlignment$(EXE_SUFFIX): handlerAlignment.cpp $(OBJDIR)handlerAlignment_asm$(OBJ_SUFFIX)
-	$(APP_CXX) $(APP_CXXFLAGS) $(COMP_EXE)$@ $^ $(APP_LDFLAGS) $(APP_LIBS) $(CXX_LPATHS) $(CXX_LIBS)
+	$(APP_CXX) $(APP_CXXFLAGS_NOOPT) $(COMP_EXE)$@ $^ $(APP_LDFLAGS_NOOPT) $(APP_LIBS) $(CXX_LPATHS) $(CXX_LIBS)
+
+$(OBJDIR)sigsegv_attach_app$(EXE_SUFFIX): sigsegv_attach_app.c
+	$(APP_CC) $(APP_CXXFLAGS_NOOPT) $(COMP_EXE)$@ $< $(APP_LDFLAGS_NOOPT) $(APP_LIBS) $(CXX_LPATHS) $(CXX_LIBS)

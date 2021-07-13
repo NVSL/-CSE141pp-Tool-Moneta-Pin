@@ -1,34 +1,16 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software and the related documents are Intel copyrighted materials, and your
+ * use of them is governed by the express license under which they were provided to
+ * you ("License"). Unless the License provides otherwise, you may not use, modify,
+ * copy, publish, distribute, disclose or transmit this software or the related
+ * documents without Intel's prior written permission.
+ * 
+ * This software and the related documents are provided as is, with no express or
+ * implied warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
-// <ORIGINAL-AUTHOR>: Greg Lueck
 // <COMPONENT>: util
 // <FILE-TYPE>: component public header
 
@@ -37,10 +19,8 @@ END_LEGAL */
 
 #include <assert.h>
 
-
-namespace UTIL {
-
-
+namespace UTIL
+{
 /*!
  * A simple smart pointer, inspired by boost::scoped_ptr.  Pointers managed by
  * SCOPED_PTR cannot be shared, and there is no reference counting overhead.  A
@@ -48,22 +28,22 @@ namespace UTIL {
  * these pointers can't be shared, SCOPED_PTR disallows assignment from one
  * SCOPED_PTR to another.
  */
-template<typename T> class /*<UTILITY>*/ SCOPED_PTR
+template< typename T > class /*<UTILITY>*/ SCOPED_PTR
 {
-public:
+  public:
     /*!
      * Create a smart pointer wrapper for \a p.
      *
      *  @param[in] p     A pointer from "new", or NULL.
      */
-    explicit SCOPED_PTR(T *p = 0) : _ptr(p) {}
+    explicit SCOPED_PTR(T* p = 0) : _ptr(p) {}
 
     /*!
      * The destructor automatically calls delete on the pointer.
      */
     ~SCOPED_PTR()
     {
-        delete _ptr;    // Note, delete of NULL is defined to do nothing.
+        delete _ptr; // Note, delete of NULL is defined to do nothing.
     }
 
     /*!
@@ -71,7 +51,7 @@ public:
      *
      *  @param[in] p    A pointer from "new", or NULL.
      */
-    void Reset(T *p = 0)
+    void Reset(T* p = 0)
     {
         delete _ptr;
         _ptr = p;
@@ -80,7 +60,7 @@ public:
     /*!
      * @return A reference to the underlying pointer, which must not be NULL.
      */
-    T & operator*() const
+    T& operator*() const
     {
         assert(_ptr != 0);
         return *_ptr;
@@ -89,7 +69,7 @@ public:
     /*!
      * @return The underlying pointer, which must not be NULL.
      */
-    T * operator->() const
+    T* operator->() const
     {
         assert(_ptr != 0);
         return _ptr;
@@ -98,21 +78,18 @@ public:
     /*!
      * @return The underlying pointer.
      */
-    T * Get() const
-    {
-        return _ptr;
-    }
+    T* Get() const { return _ptr; }
 
     /*!
      * Exchange the contents of two smart pointers.
      *
      *  @param[in] other    The other pointer that is exchanged.
      */
-    void Swap(SCOPED_PTR &other)
+    void Swap(SCOPED_PTR& other)
     {
-        T *t = other._ptr;
+        T* t       = other._ptr;
         other._ptr = _ptr;
-        _ptr = t;
+        _ptr       = t;
     }
 
     /*!
@@ -120,25 +97,19 @@ public:
      *
      * @return  TRUE if the underlying pointer is not NULL.
      */
-    operator bool () const
-    {
-        return (_ptr != 0);
-    }
+    operator bool() const { return (_ptr != 0); }
 
     /*!
      * @return  TRUE if the underlying pointer is NULL.
      */
-    bool operator! () const
-    {
-        return (_ptr == 0);
-    }
+    bool operator!() const { return (_ptr == 0); }
 
-private:
-    T *_ptr;
+  private:
+    T* _ptr;
 
-    SCOPED_PTR(SCOPED_PTR const &);
-    SCOPED_PTR & operator=(SCOPED_PTR const &);
+    SCOPED_PTR(SCOPED_PTR const&);
+    SCOPED_PTR& operator=(SCOPED_PTR const&);
 };
 
-} // namespace
+} // namespace UTIL
 #endif // file guard

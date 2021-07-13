@@ -1,33 +1,14 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * This tool should instrument the thread-{unix,windows} application, and should test
  * the PIN_IsThreadStoppedInDebugger() functionality using these steps:
@@ -49,19 +30,18 @@ END_LEGAL */
 #include <time.h>
 
 #ifdef TARGET_WINDOWS
-namespace WIND {
-# include <Windows.h>
+namespace WIND
+{
+#include <Windows.h>
 }
-# define YIELD WIND::SwitchToThread
+#define YIELD WIND::SwitchToThread
 #else
-# include <sched.h>
-# define YIELD sched_yield
+#include <sched.h>
+#define YIELD sched_yield
 #endif
 
-KNOB<std::string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
-    "o", "check-if-thread-stopped.out", "Output file");
-KNOB<unsigned> KnobThreads(KNOB_MODE_WRITEONCE, "pintool",
-    "threads", "4", "Number of threads");
+KNOB< std::string > KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool", "o", "check-if-thread-stopped.out", "Output file");
+KNOB< unsigned > KnobThreads(KNOB_MODE_WRITEONCE, "pintool", "threads", "4", "Number of threads");
 
 // This semaphore is set after all the application threads reached
 // the same (predefined) execution point
@@ -70,7 +50,7 @@ PIN_SEMAPHORE SemAllThreadStarted;
 // The thread IDs which were created and instrumented in the application
 // The order of the threads in this vector is the order in which the
 // threads will operate
-std::vector<THREADID> VecThreadIds;
+std::vector< THREADID > VecThreadIds;
 
 // This mutex protects the insertion to VecThreadIds from multiple threads
 PIN_MUTEX MtxVecThreadIds;
@@ -97,8 +77,7 @@ void PrintAllThreadIDs()
     Out << "All started threads IDs [" << std::dec;
     for (size_t i = 0; i < VecThreadIds.size(); i++)
     {
-        if (i > 0)
-            Out << ", ";
+        if (i > 0) Out << ", ";
 
         Out << VecThreadIds[i];
     }
@@ -147,7 +126,8 @@ void WaitForThisThreadToBeActive(THREADID tid)
         THREADID prevTid = VecThreadIds[ActiveThreadIndex - 1];
         while (!PIN_IsThreadStoppedInDebugger(prevTid))
         {
-            ASSERT((time(NULL) - startWaitingTime) < 10, "Timeout waiting for thread " + hexstr(prevTid) + " to stop in debugger");
+            ASSERT((time(NULL) - startWaitingTime) < 10,
+                   "Timeout waiting for thread " + hexstr(prevTid) + " to stop in debugger");
             YIELD();
         }
     }
@@ -156,7 +136,7 @@ void WaitForThisThreadToBeActive(THREADID tid)
 /* =====================================================================
  * Called on each thread when it calls GlobalFunction()
  * ===================================================================== */
-static void DoBreakpoint(THREADID tid, CONTEXT *context)
+static void DoBreakpoint(THREADID tid, CONTEXT* context)
 {
     // If all thread were started then this is the second time we're entering
     // this function for the thread 'tid'.
@@ -164,8 +144,7 @@ static void DoBreakpoint(THREADID tid, CONTEXT *context)
     // instrumentation we the debugger was returned from the break-point that
     // we mock to the same address. In this case we need to return and don't
     // repeat the test (unless we'll end up with an infinite test).
-    if (AllThreadsWereStarted)
-        return;
+    if (AllThreadsWereStarted) return;
 
     WaitForAllThreadsToStart(tid);
     // All threads are synchronized to this point
@@ -203,7 +182,7 @@ static void DoBreakpoint(THREADID tid, CONTEXT *context)
 /* =====================================================================
  * Called upon image load to instrument the function GlobalFunction
  * ===================================================================== */
-static void Image(IMG img, VOID *)
+static void Image(IMG img, VOID*)
 {
     if (IMG_IsMainExecutable(img))
     {
@@ -212,8 +191,7 @@ static void Image(IMG img, VOID *)
 
         RTN_Open(rtn);
         INS ins = RTN_InsHeadOnly(rtn);
-        INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(DoBreakpoint),
-                       IARG_THREAD_ID, IARG_CONTEXT, IARG_END);
+        INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(DoBreakpoint), IARG_THREAD_ID, IARG_CONTEXT, IARG_END);
         RTN_Close(rtn);
     }
 }
@@ -221,7 +199,7 @@ static void Image(IMG img, VOID *)
 /* =====================================================================
  * Called upon program finish
  * ===================================================================== */
-static void OnExit(INT32, VOID *)
+static void OnExit(INT32, VOID*)
 {
     PIN_SemaphoreFini(&SemAllThreadStarted);
     PIN_MutexFini(&MtxVecThreadIds);
@@ -239,8 +217,7 @@ static void OnExit(INT32, VOID *)
  * ===================================================================== */
 INT32 Usage()
 {
-    std::cerr <<
-        "This pin tool tests the functionality of PIN_IsThreadStoppedInDebugger()" << std::endl;
+    std::cerr << "This pin tool tests the functionality of PIN_IsThreadStoppedInDebugger()" << std::endl;
 
     std::cerr << KNOB_BASE::StringKnobSummary();
 
@@ -252,7 +229,7 @@ INT32 Usage()
 /* =====================================================================
  * Entry point for the tool
  * ===================================================================== */
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
     if (PIN_Init(argc, argv))
     {

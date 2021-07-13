@@ -1,58 +1,36 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
-void * current_sp_value(void* arg1,
-                        void* arg2,
-                        void* arg3,
-                        void* arg4,
-                        void* arg5,
-                        void* arg6,
-                        void* arg7,
-                        void* arg8,
-                        void* arg9)
+void* current_sp_value(void* arg1, void* arg2, void* arg3, void* arg4, void* arg5, void* arg6, void* arg7, void* arg8, void* arg9)
 {
     // Assume arg9 is on stack. Return SP value at entry to the function.
     // It is assumed that stack slot of size sizeof(void*) corresponds to every argument.
-    // This is relevant to any X86 and Intel(R) 64 calling conventions.
+    // This is relevant to any X86 and Intel(R) 64 default calling conventions.
+    // All calling conventions that support first NREGS arguments in stack also provide
+    // shadow stack area of size NREGS * sizeof(void*) just after return IP slot,
+    // so the expression below is the same for all calling conventions.
     // The expression returns address of return IP slot.
     return &arg9 - 9;
 }
 
-// Replaced by Pin instrumentation
-int check_sp_value(void* arg)
+// Replaced by Pin instrumentation.
+// This function should have the same number of arguments as current_sp_value.
+int check_sp_value(void* current_sp, void* arg2, void* arg3, void* arg4, void* arg5, void* arg6, void* arg7, void* arg8,
+                   void* arg9)
 {
-    if (arg != 0) return 0;
+    if (current_sp != 0) return 0;
     return 1;
 }
 int main()
 {
-    void * current_sp = current_sp_value(0, 0, 0, 0, 0, 0, 0, 0, 0);
-    return check_sp_value(current_sp);
+    void* current_sp = current_sp_value(0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return check_sp_value(current_sp, 0, 0, 0, 0, 0, 0, 0, 0);
 }

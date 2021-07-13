@@ -1,35 +1,20 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <assert.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <dlfcn.h>
 #include <signal.h>
 #include <sys/types.h>
@@ -41,9 +26,12 @@ END_LEGAL */
 #include <list>
 #include <sys/syscall.h>
 #include <sched.h>
-
-
-using namespace std;
+#include <errno.h>
+#include <string.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+using std::list;
+using std::string;
 
 bool shouldCancelThreads = true;
 void CancelAllThreads();
@@ -59,21 +47,14 @@ unsigned int numOfSecondaryThreads = 4;
 /*
  * try to attach pin twice to the same process
  */
-bool attachTwice = false;
-
-/*
- * Get thread Id
- */
-pid_t GetTid()
-{
-     return syscall(__NR_gettid);
-}
+bool attachTwice   = false;
+bool endlessSelect = false;
 
 void UnblockAllSignals()
 {
-     sigset_t mask;
-     sigemptyset(&mask);
-     sigprocmask(SIG_SETMASK, &mask, 0);
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigprocmask(SIG_SETMASK, &mask, 0);
 }
 
 /*
@@ -93,7 +74,7 @@ void SigUsr1Handler(int sig)
  * An endless-loop function for secondary threads
  */
 
-void * ThreadEndlessLoopFunc(void * arg)
+void* ThreadEndlessLoopFunc(void* arg)
 {
     int x = 0;
 
@@ -101,10 +82,10 @@ void * ThreadEndlessLoopFunc(void * arg)
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
-    while (1) 
+    while (1)
     {
         x++;
-        if (x > 10) 
+        if (x > 10)
         {
             x = 0;
         }
@@ -113,64 +94,88 @@ void * ThreadEndlessLoopFunc(void * arg)
     return 0;
 }
 
-#define DECSTR(buf, num) { buf = (char *)malloc(10); sprintf(buf, "%d", num); }
+void* ThreadEndlessSelectFunc(void* arg)
+{
+    int sock[2];
+    int err = socketpair(PF_LOCAL, SOCK_DGRAM, 0, sock);
+    assert(err >= 0);
+    fd_set fd_read;
 
-inline void PrintArguments(char **inArgv)
+    FD_ZERO(&fd_read);
+    FD_SET(sock[1], &fd_read);
+
+    do
+    {
+        err = select(sock[1] + 1, &fd_read, NULL, NULL, NULL);
+        // We expect select() to fail since nobody writes to the write side of the socket
+        assert(-1 == err);
+    }
+    while (err < 0 && errno == EINTR);
+    return 0;
+}
+
+#define DECSTR(buf, num)         \
+    {                            \
+        buf = (char*)malloc(10); \
+        sprintf(buf, "%d", num); \
+    }
+
+inline void PrintArguments(char** inArgv)
 {
     fprintf(stderr, "Going to run: ");
-    for(unsigned int i=0; inArgv[i] != 0; ++i)
+    for (unsigned int i = 0; inArgv[i] != 0; ++i)
     {
         fprintf(stderr, "%s ", inArgv[i]);
     }
     fprintf(stderr, "\n");
 }
 
-
 /* AttachAndInstrument()
  * a special routine that runs $PIN
  */
-pid_t AttachAndInstrument(list <string > * pinArgs)
+pid_t AttachAndInstrument(list< string >* pinArgs)
 {
-    list <string >::iterator pinArgIt = pinArgs->begin();
+    list< string >::iterator pinArgIt = pinArgs->begin();
 
     string pinBinary = *pinArgIt;
     pinArgIt++;
 
     pid_t parent_pid = getpid();
-    
+
     pid_t child = fork();
 
-    if (child) 
+    assert(child >= 0);
+    if (child)
     {
         fprintf(stderr, "Pin injector pid %d\n", child);
         // inside parent
-        return child;  
+        return child;
     }
     else
     {
         // inside child
 
         UnblockAllSignals();
-        char **inArgv = new char*[pinArgs->size()+10];
+        char** inArgv = new char*[pinArgs->size() + 10];
 
         unsigned int idx = 0;
-        inArgv[idx++] = (char *)pinBinary.c_str(); 
-        inArgv[idx++] = (char*)"-pid"; 
-        inArgv[idx] = (char *)malloc(10);
+        inArgv[idx++]    = (char*)pinBinary.c_str();
+        inArgv[idx++]    = (char*)"-pid";
+        inArgv[idx]      = (char*)malloc(10);
         sprintf(inArgv[idx++], "%d", parent_pid);
 
         for (; pinArgIt != pinArgs->end(); pinArgIt++)
         {
-            inArgv[idx++]= (char *)pinArgIt->c_str();
+            inArgv[idx++] = (char*)pinArgIt->c_str();
         }
         inArgv[idx] = 0;
-        
+
         PrintArguments(inArgv);
 
         execvp(inArgv[0], inArgv);
         fprintf(stderr, "ERROR: execv %s failed\n", inArgv[0]);
         kill(parent_pid, 9);
-        return 0; 
+        return 0;
     }
 }
 
@@ -179,43 +184,42 @@ pid_t AttachAndInstrument(list <string > * pinArgs)
  */
 void SendSignals(int signo)
 {
-    
     pid_t parentPid = getpid();
-    pid_t pid = fork();
+    pid_t pid       = fork();
     if (pid)
     {
         fprintf(stderr, "Send signals pid %d\n", pid);
+        waitpid(pid, NULL, 0);
         // inside parent
-        return;          
+        return;
     }
-    if ( pid == 0 ) // child
+    if (pid == 0) // child
     {
-        char **inArgv = new char*[15];
-    
+        char** inArgv = new char*[15];
+
         unsigned int idx = 0;
-        inArgv[idx++] = (char *)"./send_signals.sh"; 
+        inArgv[idx++]    = (char*)"./send_signals.sh";
         DECSTR(inArgv[idx], parentPid);
         idx++;
         DECSTR(inArgv[idx], signo);
         idx++;
         inArgv[idx] = 0;
-    
+
         PrintArguments(inArgv);
-    
+
         execvp(inArgv[0], inArgv);
         fprintf(stderr, "ERROR: execv %s failed\n", inArgv[0]);
     }
 }
 
-
 /*
  * Expected command line: <this exe> [-th_num NUM] -pin $PIN -pinarg <pin args > -t tool <tool args>
  */
 
-void ParseCommandLine(int argc, char *argv[], list < string>* pinArgs)
+void ParseCommandLine(int argc, char* argv[], list< string >* pinArgs)
 {
     string pinBinary;
-    for (int i=1; i<argc; i++)
+    for (int i = 1; i < argc; i++)
     {
         string arg = string(argv[i]);
         if (arg == "-th_num")
@@ -234,78 +238,128 @@ void ParseCommandLine(int argc, char *argv[], list < string>* pinArgs)
                 ++i;
             }
         }
-        else if ("-attach_twice")
+        else if (arg == "-attach_twice")
         {
             attachTwice = true;
         }
-        else if ("-keep_threads")
+        else if (arg == "-keep_threads")
         {
             shouldCancelThreads = false;
+        }
+        else if (arg == "-endless_select")
+        {
+            endlessSelect = true;
         }
     }
     assert(!pinBinary.empty());
     pinArgs->push_front(pinBinary);
 }
 
-pthread_t *thHandle;
+pthread_t* thHandle;
 
 extern "C" int ThreadsReady(unsigned int numOfThreads)
 {
-    assert(numOfThreads == numOfSecondaryThreads+1);
+    assert(numOfThreads == numOfSecondaryThreads + 1);
     return 0;
 }
-    
-int main(int argc, char *argv[])
+
+int main(int argc, char* argv[])
 {
-   list <string> pinArgs;
-   ParseCommandLine(argc, argv, &pinArgs);
-    
+    list< string > pinArgs;
+    int status = 0;
+    int retval = 0;
+    ParseCommandLine(argc, argv, &pinArgs);
+
     signal(SIGUSR1, SigUsr1Handler);
-    
+
     thHandle = new pthread_t[numOfSecondaryThreads];
 
     // start all secondary threads
     // in the secondary threads SIGUSR1 should be blocked
     BlockSignal(SIGUSR1);
-    for (unsigned int i = 0; i < numOfSecondaryThreads; i++)
+    for (intptr_t i = 0; i < numOfSecondaryThreads; i++)
     {
-        pthread_create(&thHandle[i], 0, ThreadEndlessLoopFunc, (void *)i);
+        retval = pthread_create(&thHandle[i], 0, endlessSelect ? ThreadEndlessSelectFunc : ThreadEndlessLoopFunc, (void*)i);
+        assert(retval == 0);
     }
     UnblockSignal(SIGUSR1);
 
-    AttachAndInstrument(&pinArgs);
-    
-    // Give enough time for all threads to get started 
-    while (!ThreadsReady(numOfSecondaryThreads+1))
+    sigset_t sigMask, sigMaskAfterAttach;
+    // Just to be on the safe side, reset to all zeros.
+    memset(&sigMask, 0, sizeof(sigMask));
+    memset(&sigMaskAfterAttach, 0, sizeof(sigMaskAfterAttach));
+    retval = sigemptyset(&sigMask);
+    assert(retval == 0);
+    retval = sigemptyset(&sigMaskAfterAttach);
+    assert(retval == 0);
+
+    //unsigned char* p = (unsigned char*)&sigMask;
+    //for (int i=0; i<(int)sizeof(sigset_t); i++){cerr << dec << i << "\t" << (int)p[i] << endl;}
+
+    // If we block SIGTRAP then Pin attach might unblock it - see Mantis #3879
+#ifndef TARGET_LINUX
+    retval = sigaddset(&sigMask, SIGTRAP);
+    assert(retval == 0);
+#endif
+    retval = sigaddset(&sigMask, SIGHUP);
+    assert(retval == 0);
+    retval = sigaddset(&sigMask, SIGQUIT);
+    assert(retval == 0);
+
+    retval = pthread_sigmask(SIG_SETMASK, &sigMask, NULL);
+    assert(retval == 0);
+
+    pid_t pinInjectorPid = AttachAndInstrument(&pinArgs);
+    while (pinInjectorPid != waitpid(pinInjectorPid, &status, 0))
+    {
+        assert(errno == EINTR);
+    }
+    if (!WIFEXITED(status))
+    {
+        printf("ERROR: Pin injector exited abnormally: %x\n", status);
+        exit(-1);
+    }
+    if (WEXITSTATUS(status) != 0)
+    {
+        printf("ERROR: Pin injector exited with nonzero exit code: %d\n", WEXITSTATUS(status));
+        exit(-1);
+    }
+
+    // Give enough time for all threads to get started
+    while (!ThreadsReady(numOfSecondaryThreads + 1))
     {
         sched_yield();
-    }        
-    
+    }
+
+    // Check that the signal mask was not changed due to Pin attach
+    retval = pthread_sigmask(SIG_SETMASK, NULL, &sigMaskAfterAttach);
+    assert(retval == 0);
+    assert(0 == memcmp(&sigMask, &sigMaskAfterAttach, sizeof(sigMask)));
+
     if (attachTwice)
     {
-        pid_t pinInjectorPid = AttachAndInstrument(&pinArgs);
-        int status = 0;
-        while (1)
+        pinInjectorPid = AttachAndInstrument(&pinArgs);
+        while (pinInjectorPid != waitpid(pinInjectorPid, &status, 0))
         {
-            waitpid(pinInjectorPid, &status, 0);
-            if (WIFEXITED(status))
-            {
-                if (WEXITSTATUS(status) == 0)
-                {
-                    printf("ERROR: Pin was injected twice to the same process\n");
-                    exit(-1);
-                }
-                printf("Second attach exited with status %d\n", WEXITSTATUS(status));
-                break;
-            }
+            assert(errno == EINTR);
         }
+        if (!WIFEXITED(status))
+        {
+            printf("ERROR: Pin injector exited abnormally in second attach: %x\n", status);
+            exit(-1);
+        }
+        if (WEXITSTATUS(status) == 0)
+        {
+            printf("ERROR: Pin was injected twice to the same process\n");
+            exit(-1);
+        }
+        printf("Second attach exited with status %d\n", WEXITSTATUS(status));
     }
-    
-        
+
     fprintf(stderr, "Sending SIGUSR1\n");
     SendSignals(SIGUSR1);
-    
-    while(shouldCancelThreads)
+
+    while (shouldCancelThreads)
     {
         sched_yield();
     }
@@ -318,21 +372,36 @@ void CancelAllThreads()
 {
     for (unsigned int i = 0; i < numOfSecondaryThreads; i++)
     {
-        pthread_cancel(thHandle[i]);
+        int retval = pthread_cancel(thHandle[i]);
+        assert(retval == 0);
     }
 }
 
 void BlockSignal(int sigNo)
 {
     sigset_t mask;
-    sigemptyset(&mask);
-    sigaddset(&mask, sigNo);   
-    sigprocmask(SIG_BLOCK, &mask, 0);
+    int retval;
+
+    retval = sigemptyset(&mask);
+    assert(retval == 0);
+
+    retval = sigaddset(&mask, sigNo);
+    assert(retval == 0);
+
+    retval = sigprocmask(SIG_BLOCK, &mask, 0);
+    assert(retval == 0);
 }
 void UnblockSignal(int sigNo)
 {
     sigset_t mask;
-    sigemptyset(&mask);
-    sigaddset(&mask, sigNo);
-    sigprocmask(SIG_UNBLOCK, &mask, 0);
+    int retval;
+
+    retval = sigemptyset(&mask);
+    assert(retval == 0);
+
+    retval = sigaddset(&mask, sigNo);
+    assert(retval == 0);
+
+    retval = sigprocmask(SIG_UNBLOCK, &mask, 0);
+    assert(retval == 0);
 }

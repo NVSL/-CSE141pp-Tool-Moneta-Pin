@@ -1,50 +1,29 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software and the related documents are Intel copyrighted materials, and your
+ * use of them is governed by the express license under which they were provided to
+ * you ("License"). Unless the License provides otherwise, you may not use, modify,
+ * copy, publish, distribute, disclose or transmit this software or the related
+ * documents without Intel's prior written permission.
+ * 
+ * This software and the related documents are provided as is, with no express or
+ * implied warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
-// <ORIGINAL-AUTHOR>: Greg Lueck
 // <COMPONENT>: atomic
 // <FILE-TYPE>: component public header
 
 #ifndef ATOMIC_LIFO_CTR_HPP
 #define ATOMIC_LIFO_CTR_HPP
 
-#include "fund.hpp"
 #include "atomic/config.hpp"
 #include "atomic/ops.hpp"
 #include "atomic/nullstats.hpp"
 #include "atomic/exponential-backoff.hpp"
 
-
-namespace ATOMIC {
-
-
+namespace ATOMIC
+{
 /*! @brief  Last-in-first-out queue.
  *
  * A non-blocking atomic LIFO queue (stack) of elements.  The client manages the allocation, deallocation, and content
@@ -93,9 +72,9 @@ namespace ATOMIC {
  *  }
  *                                                                                          \endcode
  */
-template<typename ELEMENT, typename HEAP, unsigned int IndexBits, unsigned int CounterBits, typename WORD,
-    typename STATS=NULLSTATS>
- class /*<UTILITY>*/ LIFO_CTR
+template< typename ELEMENT, typename HEAP, unsigned int IndexBits, unsigned int CounterBits, typename WORD,
+          typename STATS = NULLSTATS >
+class /*<UTILITY>*/ LIFO_CTR
 {
   public:
     /*!
@@ -104,7 +83,7 @@ template<typename ELEMENT, typename HEAP, unsigned int IndexBits, unsigned int C
      *  @param[in] heap     An object which converts between element indices and pointers.
      *  @param[in] stats    The statistics collection object, or NULL if no statistics should be collected.
      */
-    LIFO_CTR(HEAP *heap, STATS *stats=0) : _heap(heap), _stats(stats)
+    LIFO_CTR(HEAP* heap, STATS* stats = 0) : _heap(heap), _stats(stats)
     {
         ATOMIC_CHECK_ASSERT(sizeof(_head) == sizeof(_head._word));
 
@@ -116,29 +95,26 @@ template<typename ELEMENT, typename HEAP, unsigned int IndexBits, unsigned int C
      *
      *  @param[in] stats    The new statistics collection object.
      */
-    void SetStatsNonAtomic(STATS *stats)
-    {
-        _stats = stats;
-    }
+    void SetStatsNonAtomic(STATS* stats) { _stats = stats; }
 
     /*!
      * Push an element onto the head of the lifo queue.
      *
      *  @param[in] element  The element to push.
      */
-    void Push(ELEMENT *element)
+    void Push(ELEMENT* element)
     {
         HEAD oldHead;
         HEAD newHead;
-        EXPONENTIAL_BACKOFF<STATS> backoff(1, _stats);
+        EXPONENTIAL_BACKOFF< STATS > backoff(1, _stats);
         do
         {
             backoff.Delay();
 
-            oldHead._word = OPS::Load(&_head._word);
-            element->_next = _heap->Pointer(oldHead._fields._iElement);
+            oldHead._word             = OPS::Load(&_head._word);
+            element->_next            = _heap->Pointer(oldHead._fields._iElement);
             newHead._fields._iElement = _heap->Index(element);
-            newHead._fields._counter = oldHead._fields._counter+1;
+            newHead._fields._counter  = oldHead._fields._counter + 1;
 
             // BARRIER_CS_PREV below ensures that all processors will see the write to _next
             // before the element is inserted into the queue.
@@ -153,19 +129,19 @@ template<typename ELEMENT, typename HEAP, unsigned int IndexBits, unsigned int C
      *                           last element's _next pointer must be NULL.
      *  @param[in] listTail     The last element in the list.
      */
-    void PushList(ELEMENT *listHead, ELEMENT *listTail)
+    void PushList(ELEMENT* listHead, ELEMENT* listTail)
     {
         HEAD oldHead;
         HEAD newHead;
-        EXPONENTIAL_BACKOFF<STATS> backoff(1, _stats);
+        EXPONENTIAL_BACKOFF< STATS > backoff(1, _stats);
         do
         {
             backoff.Delay();
 
-            oldHead._word = OPS::Load(&_head._word);
-            listTail->_next = _heap->Pointer(oldHead._fields._iElement);
+            oldHead._word             = OPS::Load(&_head._word);
+            listTail->_next           = _heap->Pointer(oldHead._fields._iElement);
             newHead._fields._iElement = _heap->Index(listHead);
-            newHead._fields._counter = oldHead._fields._counter+1;
+            newHead._fields._counter  = oldHead._fields._counter + 1;
 
             // BARRIER_CS_PREV below ensures that all processors will see the write to _next
             // before the element is inserted into the queue.
@@ -185,12 +161,12 @@ template<typename ELEMENT, typename HEAP, unsigned int IndexBits, unsigned int C
      *
      * @return  Returns the popped element on success, or NULL if the queue is empty.
      */
-    ELEMENT *Pop(bool *isEmpty=0, unsigned maxRetries=0)
+    ELEMENT* Pop(bool* isEmpty = 0, unsigned maxRetries = 0)
     {
         HEAD oldHead;
         HEAD newHead;
-        ELEMENT *element;
-        EXPONENTIAL_BACKOFF<STATS> backoff(1, _stats);
+        ELEMENT* element;
+        EXPONENTIAL_BACKOFF< STATS > backoff(1, _stats);
 
         do
         {
@@ -199,14 +175,13 @@ template<typename ELEMENT, typename HEAP, unsigned int IndexBits, unsigned int C
             oldHead._word = OPS::Load(&_head._word);
             if (oldHead._fields._iElement == 0)
             {
-                if (isEmpty)
-                    *isEmpty = true;
+                if (isEmpty) *isEmpty = true;
                 return 0;
             }
 
-            element = _heap->Pointer(oldHead._fields._iElement);
+            element                   = _heap->Pointer(oldHead._fields._iElement);
             newHead._fields._iElement = _heap->Index(element->_next);
-            newHead._fields._counter = oldHead._fields._counter+1;
+            newHead._fields._counter  = oldHead._fields._counter + 1;
         }
         while (!OPS::CompareAndDidSwap(&_head._word, oldHead._word, newHead._word, BARRIER_CS_NEXT));
 
@@ -219,7 +194,7 @@ template<typename ELEMENT, typename HEAP, unsigned int IndexBits, unsigned int C
     /*!
      * @return  Returns the first element on the queue, or NULL if it is empty.
      */
-    ELEMENT *Head()
+    ELEMENT* Head()
     {
         HEAD head;
         head._word = OPS::Load(&_head._word);
@@ -229,10 +204,7 @@ template<typename ELEMENT, typename HEAP, unsigned int IndexBits, unsigned int C
     /*!
      * @return  Returns the first element on the queue, or NULL if it is empty.
      */
-    const ELEMENT *Head() const
-    {
-        return const_cast<LIFO_CTR*>(this)->Head();
-    }
+    const ELEMENT* Head() const { return const_cast< LIFO_CTR* >(this)->Head(); }
 
     /*!
      * Atomically clears the lifo queue and returns a pointer to the previous contents.
@@ -240,18 +212,18 @@ template<typename ELEMENT, typename HEAP, unsigned int IndexBits, unsigned int C
      * @return  Returns a pointer to a linked list with the previous elements in
      *           in the queue, or NULL if the queue was already empty.
      */
-    ELEMENT *Clear()
+    ELEMENT* Clear()
     {
         HEAD oldHead;
         HEAD newHead;
-        EXPONENTIAL_BACKOFF<STATS> backoff(1, _stats);
+        EXPONENTIAL_BACKOFF< STATS > backoff(1, _stats);
 
         newHead._fields._iElement = 0;
         do
         {
             backoff.Delay();
-            oldHead._word = OPS::Load(&_head._word);
-            newHead._fields._counter = oldHead._fields._counter+1;
+            oldHead._word            = OPS::Load(&_head._word);
+            newHead._fields._counter = oldHead._fields._counter + 1;
         }
         while (!OPS::CompareAndDidSwap(&_head._word, oldHead._word, newHead._word, BARRIER_CS_NEXT));
 
@@ -268,35 +240,34 @@ template<typename ELEMENT, typename HEAP, unsigned int IndexBits, unsigned int C
      *  @param[in] list     A list of ELEMENTs linked through their _next pointers.  The
      *                       last element's _next pointer must be NULL.
      */
-    void AssignNonAtomic(ELEMENT *list)
+    void AssignNonAtomic(ELEMENT* list)
     {
         HEAD newHead;
-        newHead._word = 0;
+        newHead._word             = 0;
         newHead._fields._iElement = _heap->Index(list);
-        _head._word = newHead._word;
+        _head._word               = newHead._word;
     }
 
   private:
-
     // This is the head of the lifo queue.
     //
-    // NOTE: This is defined as a union with _word to avoid a compiler bug with the Itanium(R) version
-    // of GCC 4.0.0.  See the SVN commit log r3543 for more details.
+    // NOTE: This is defined as a union with _word to avoid a compiler bug.
+    //       See the SVN commit log r3543 for more details.
     //
     union HEAD
     {
         WORD _word;
         struct
         {
-            WORD _iElement : IndexBits;     // Index of first ELEMENT in queue
-            WORD _counter : CounterBits;    // Modification counter (solves A-B-A problem)
+            WORD _iElement : IndexBits;  // Index of first ELEMENT in queue
+            WORD _counter : CounterBits; // Modification counter (solves A-B-A problem)
         } _fields;
     };
     volatile HEAD _head;
 
-    HEAP *_heap;    // Heap containing objects which are in the queue
-    STATS *_stats;  // Object which collects statistics, or NULL
+    HEAP* _heap;   // Heap containing objects which are in the queue
+    STATS* _stats; // Object which collects statistics, or NULL
 };
 
-} // namespace
+} // namespace ATOMIC
 #endif // file guard

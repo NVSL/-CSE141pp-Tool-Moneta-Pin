@@ -1,33 +1,14 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*!
  * @file
  * This pin tool domonstrate the difference between PIN_CallApplicationFunction() and
@@ -48,6 +29,10 @@ END_LEGAL */
 #include <fstream>
 #include <cstdlib>
 #include <cstring>
+using std::cerr;
+using std::endl;
+using std::ofstream;
+using std::string;
 
 #ifdef TARGET_MAC
 #define NAME(x) "_" x
@@ -55,14 +40,11 @@ END_LEGAL */
 #define NAME(x) x
 #endif
 
-using namespace std;
-
 /* ===================================================================== */
 /* Commandline Switches */
 /* ===================================================================== */
 
-KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
-    "o", "call_function_natively.out", "specify file name");
+KNOB< string > KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool", "o", "call_function_natively.out", "specify file name");
 
 // Tool's output file
 ofstream TraceFile;
@@ -80,10 +62,9 @@ static int callingDepth = 0;
 
 static INT32 Usage()
 {
-    cerr <<
-        "This pin tool domonstrate the difference between PIN_CallApplicationFunction() and "
-        "PIN_CallApplicationFunctionNatively."
-        << endl;
+    cerr << "This pin tool domonstrate the difference between PIN_CallApplicationFunction() and "
+            "PIN_CallApplicationFunctionNatively."
+         << endl;
     cerr << KNOB_BASE::StringKnobSummary();
     cerr << endl;
     return -1;
@@ -105,25 +86,26 @@ static void HandleCallInHello(char* instType)
     TraceFile << depthString() << "Calling world from helloX (instrumented " << instType << ")" << endl;
 }
 
-static void callApplicationFunction(THREADID tid, CONTEXT *ctxt, BOOL natively)
+static void callApplicationFunction(THREADID tid, CONTEXT* ctxt, BOOL natively)
 {
     char buf[128] = {0};
     char* ret;
 
-    TraceFile << depthString() << "Calling helloX from tool " << (natively?"natively":"regularly") << endl;
+    TraceFile << depthString() << "Calling helloX from tool " << (natively ? "natively" : "regularly") << endl;
     callingDepth++;
     CALL_APPLICATION_FUNCTION_PARAM param;
     memset(&param, 0, sizeof(param));
     param.native = natively;
 
-    PIN_CallApplicationFunction(ctxt, tid, CALLINGSTD_DEFAULT, AFUNPTR(helloXAddr), &param, PIN_PARG(char*), &ret, PIN_PARG(char*), buf, PIN_PARG_END());
+    PIN_CallApplicationFunction(ctxt, tid, CALLINGSTD_DEFAULT, AFUNPTR(helloXAddr), &param, PIN_PARG(char*), &ret,
+                                PIN_PARG(char*), buf, PIN_PARG_END());
 
     callingDepth--;
     TraceFile << depthString() << "Returned from helloX in tool with '" << ret << "'" << endl;
 }
 
 // This function should be called at the end of the application's main()
-static void AfterMain(THREADID tid, CONTEXT *ctxt)
+static void AfterMain(THREADID tid, CONTEXT* ctxt)
 {
     callApplicationFunction(tid, ctxt, TRUE);
     callApplicationFunction(tid, ctxt, FALSE);
@@ -133,7 +115,7 @@ static void AfterMain(THREADID tid, CONTEXT *ctxt)
 // This is the instrumentation routine
 // It Should locate the single instruction in the application which is
 // the call from helloX() to world(), and instrument it
-static void Instruction(INS ins, VOID *v)
+static void Instruction(INS ins, VOID* v)
 {
     ADDRINT addr = INS_Address(ins);
     if (addr < helloXAddr && addr >= helloXEndAddr)
@@ -143,9 +125,7 @@ static void Instruction(INS ins, VOID *v)
     }
 
     // Find the instruction which is the call to world()
-    if (INS_IsCall(ins)
-        && INS_IsDirectBranchOrCall(ins)
-        && INS_DirectBranchOrCallTargetAddress(ins) == worldAddr)
+    if (INS_IsCall(ins) && INS_IsDirectControlFlow(ins) && INS_DirectControlFlowTargetAddress(ins) == worldAddr)
     {
         INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(HandleCallInHello), IARG_ADDRINT, v, IARG_END);
     }
@@ -160,7 +140,7 @@ static ADDRINT FindAddressOfRtn(IMG img, const string& rtnName)
 }
 
 // Called opon new image load
-static void Image(IMG img, VOID *v)
+static void Image(IMG img, VOID* v)
 {
     if (!IMG_IsMainExecutable(img))
     {
@@ -169,7 +149,7 @@ static void Image(IMG img, VOID *v)
 
     // Find the relevant function addresses
     helloXAddr = FindAddressOfRtn(img, NAME("helloX"));
-    worldAddr = FindAddressOfRtn(img, NAME("world"));
+    worldAddr  = FindAddressOfRtn(img, NAME("world"));
 
     RTN r = RTN_FindByAddress(helloXAddr);
     ASSERTX(RTN_Valid(r));
@@ -192,9 +172,9 @@ static void Image(IMG img, VOID *v)
     RTN_Close(mainRtn);
 }
 
-int main(int argc, CHAR *argv[])
+int main(int argc, CHAR* argv[])
 {
-    if( PIN_Init(argc,argv) )
+    if (PIN_Init(argc, argv))
     {
         return Usage();
     }

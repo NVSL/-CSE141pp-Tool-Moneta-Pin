@@ -1,3 +1,15 @@
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
+#include <asm_macros.h>
 
 nothing:
     ret
@@ -7,118 +19,108 @@ set_dead_beef:
     ret
 
 # A function with jmp in the first 5 bytes
-.type relocatable_1, @function
-.global relocatable_1
-RELOCATABLE_1_START:
-relocatable_1:
+DECLARE_FUNCTION(relocatable_1)
+.global NAME(relocatable_1)
+NAME(relocatable_1):
     push %ebp
     mov %esp, %ebp
-RL1:
+LBB0:
     call nothing
     call nothing
     movl $1, %eax
     test %eax, %eax
-    je RL1
+    je LBB0
     leave
     ret
-RELOCATABLE_1_END:
-.size relocatable_1, RELOCATABLE_1_END - RELOCATABLE_1_START
+END_FUNCTION(relocatable_1)
 
 
 # A function with jmp in the first 5 bytes, that does an indirect call to another function
-.type relocatable_1a, @function
-.global relocatable_1a
-RELOCATABLE_1a_START:
-relocatable_1a:
+DECLARE_FUNCTION(relocatable_1a)
+.global NAME(relocatable_1a)
+NAME(relocatable_1a):
     push %ebp
     mov %esp, %ebp
-RL1a:
+LBB1:
     mov $1, %eax
     lea set_dead_beef, %ecx
-    call %ecx
+    calll *%ecx
     test %eax, %eax
-    je RL1a
+    je LBB1
     leave
     ret
-RELOCATABLE_1a_END:
-.size relocatable_1a, RELOCATABLE_1a_END - RELOCATABLE_1a_START
+END_FUNCTION(relocatable_1a)
 
 
 
 # A function with short first bb
-.type relocatable_2, @function
-.global relocatable_2
-RELOCATABLE_2_START:
-relocatable_2:
+DECLARE_FUNCTION(relocatable_2)
+.global NAME(relocatable_2)
+NAME(relocatable_2):
     xor %eax, %eax
-    L:
+    LBB2:
     call nothing
     cmpl $1, %eax
-    je exit_func
+    je LBB3
     inc %eax
-    jmp L    
- exit_func:
+    jmp LBB2    
+ LBB3:
     ret
     xor %eax, %eax
     xor %ebx, %ebx
-RELOCATABLE_2_END:
-.size relocatable_2, RELOCATABLE_2_END - RELOCATABLE_2_START
+END_FUNCTION(relocatable_2)
 
 # A function with short first bb
-.type relocatable_3, @function
-.global relocatable_3
-RELOCATABLE_3_START:
-relocatable_3:
+DECLARE_FUNCTION(relocatable_3)
+.global NAME(relocatable_3)
+NAME(relocatable_3):
     xor %eax, %eax
-    R3L:
+    LBB4:
     mov $2, %eax
     call nothing
     cmpl $1, %eax
-    jne R3M
+    jne LBB5
     mov $0, %eax
-    jmp R3L    
- R3M:
+    jmp LBB4    
+ LBB5:
     ret
     xor %eax, %eax
     xor %ebx, %ebx
-RELOCATABLE_3_END:
-.size relocatable_3, RELOCATABLE_3_END - RELOCATABLE_3_START
+END_FUNCTION(relocatable_3)
 
 # A function with indirect jump
-.type non_relocatable_1, @function
-.global non_relocatable_1
+DECLARE_FUNCTION(non_relocatable_1)
+.global NAME(non_relocatable_1)
 NON_RELOCATABLE_1_START:
-non_relocatable_1:
+NAME(non_relocatable_1):
     push %ebp
-NR1L:
+LBB6:
     mov %esp, %ebp
     mov 8(%ebp), %eax
     call nothing
     call nothing
     call nothing
-    je NR1L
-    jmp *%eax
+    je LBB6
+    jmpl *%eax
     leave
     ret
-NON_RELOCATABLE_1_END:
-.size non_relocatable_1, NON_RELOCATABLE_1_END - NON_RELOCATABLE_1_START
+END_FUNCTION(non_relocatable_1)
 
 # A function with fallthru at the end
-.type non_relocatable_2, @function
-.global non_relocatable_2
-NON_RELOCATABLE_2_START:
-non_relocatable_2:
-	push %ebp
-NR2M:
+DECLARE_FUNCTION(non_relocatable_2)
+.global NAME(non_relocatable_2)
+NAME(non_relocatable_2):
+    push %ebp
+LBB8:
     mov %esp, %ebp
     test %eax, %eax
-    jb NR2M
-    je NR2L
+    jb LBB8
+    je LBB7
     leave
     ret
-NR2L:
+LBB7:
     inc %eax
     test %eax, %eax
-    je non_relocatable_2
-NON_RELOCATABLE_2_END:
-.size non_relocatable_2, NON_RELOCATABLE_2_END - NON_RELOCATABLE_2_START
+    je NAME(non_relocatable_2)
+END_FUNCTION(non_relocatable_2)
+

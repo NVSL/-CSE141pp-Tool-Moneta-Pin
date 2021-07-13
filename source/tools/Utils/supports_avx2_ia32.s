@@ -1,3 +1,14 @@
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifdef TARGET_MAC
 .global _SupportsAvx2
 _SupportsAvx2:
@@ -24,10 +35,10 @@ SupportsAvx2:
     cmpl $6, %eax      # check OS has enabled both XMM and YMM state support
     jne NotSupported
     mov $7, %eax
-    mov $0, %ecx       
+    mov $0, %ecx       // Check for AVX2 support on CPU
     cpuid
-    andl $0x10, %ebx
-    cmpl $0x10, %ebx
+    andl $0x20, %ebx   // bit 5 avx2
+    cmpl $0x20, %ebx   // bit 5 avx2
     jne NotSupported   # no AVX2
     mov $1, %eax
 done:

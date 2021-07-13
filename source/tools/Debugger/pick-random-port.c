@@ -1,33 +1,14 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -57,15 +38,15 @@ int is_invalid_errno()
 
 void usage(char* cmd)
 {
-    fprintf(stderr, "Usage: %s <unused|used>\n"
+    fprintf(stderr,
+            "Usage: %s <unused|used>\n"
             "\tunused - Return unused random port and exit\n"
-            "\tused - Print a port that is being used, and hang on\n", cmd);
+            "\tused - Print a port that is being used, and hang on\n",
+            cmd);
     exit(3);
 }
 
-void alarm_signal_handler(int sig)
-{
-}
+void alarm_signal_handler(int sig) {}
 
 int main(int argc, char* argv[])
 {
@@ -86,7 +67,7 @@ int main(int argc, char* argv[])
     {
         usage(argv[0]);
     }
-    srand ((unsigned int)time(NULL));
+    srand((unsigned int)time(NULL));
     do
     {
         int random_port = 0x400 + (rand() % 0xffff - 0x400); //Picks a random number from 1024 to 65535
@@ -94,9 +75,9 @@ int main(int argc, char* argv[])
         int listenfd = socket(AF_INET, SOCK_STREAM, 0);
         memset(&serv_addr, 0, sizeof(serv_addr));
 
-        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_family      = AF_INET;
         serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-        serv_addr.sin_port = htons(random_port);
+        serv_addr.sin_port        = htons(random_port);
         if (0 != bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)))
         {
             close(listenfd);
@@ -128,7 +109,7 @@ int main(int argc, char* argv[])
              * continue.
              */
             pid_t ppid = getppid(); //ppid is the process ID of "make"
-            pid_t pid = fork();
+            pid_t pid  = fork();
             if (pid < 0)
             {
                 perror("fork");

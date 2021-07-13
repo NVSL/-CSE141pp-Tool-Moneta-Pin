@@ -1,33 +1,14 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * Test that we can read / write a thread's MXCSR register via the Windows CONTEXT.MxCsr field.
  */
@@ -36,17 +17,16 @@ END_LEGAL */
 #include <iostream>
 #include <cstring>
 
-const unsigned MXCSR_INITIAL = 0x1f80;  // All exceptions masked
-const unsigned MXCSR_NEW = 0x1d80;      // Enable divide-by-zero exceptions
+const unsigned MXCSR_INITIAL = 0x1f80; // All exceptions masked
+const unsigned MXCSR_NEW     = 0x1d80; // Enable divide-by-zero exceptions
 
 volatile bool TestThreadReady = false;
-volatile bool MxcsrChanged = false;
+volatile bool MxcsrChanged    = false;
 
 extern "C" void SetMxcsr(unsigned);
 extern "C" unsigned GetMxcsr();
 
 static DWORD WINAPI TestThread(LPVOID);
-
 
 int main()
 {
@@ -89,7 +69,7 @@ int main()
     }
 
     ctxt.ContextFlags = CONTEXT_FLOATING_POINT;
-    ctxt.MxCsr = MXCSR_NEW;
+    ctxt.MxCsr        = MXCSR_NEW;
     if (SetThreadContext(thd, &ctxt) == 0)
     {
         std::cerr << "Error from SetThreadContext()" << std::endl;
@@ -109,7 +89,6 @@ int main()
     return ret;
 }
 
-
 static DWORD WINAPI TestThread(LPVOID)
 {
     SetMxcsr(MXCSR_INITIAL);
@@ -121,7 +100,8 @@ static DWORD WINAPI TestThread(LPVOID)
     // of emulating it).  The test would still be valid in that case, but it's a better test
     // if it exercises the emulation support in Pin.
     //
-    while (!MxcsrChanged);
+    while (!MxcsrChanged)
+        ;
 
     unsigned mxcsr = GetMxcsr();
     if (mxcsr != MXCSR_NEW)

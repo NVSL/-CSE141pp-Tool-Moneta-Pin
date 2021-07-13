@@ -1,4 +1,13 @@
-/* @ORIGINAL_AUTHOR: Benjamin Kemper */
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
 /*! @file
  *
@@ -15,7 +24,7 @@
 
 #include "os_specific.h"
 
-char** build_user_argv(int* argc)
+static char** build_user_argv(int* argc)
 {
     char** argv = NULL;
     /* Usage Example:
@@ -25,21 +34,24 @@ char** build_user_argv(int* argc)
      argv = (char**) malloc(sizeof(char*) * (*argc));
 
      argv[0] = "-t";
-     argv[1] = append3("path_to_tool", "/", "toolname32");
+     argv[1] = appendPath("path_to_tool", "/", "toolname32");
      argv[2] = "-t64";
-     argv[3] = append3("path_to_tool", "/", "toolname64");
+     argv[3] = appendPath("path_to_tool", "/", "toolname64");
      */
 
     return argv;
 }
 
-void check_environment()
+/* For testing purposes only */
+#if 0
+static void check_environment()
 {
     char* s;
     int i;
     const char* array[] = {
             "LD_LIBRARY_PATH",
-            "PIN_VM_LD_LIBRARY_PATH",
+            "PIN_VM32_LD_LIBRARY_PATH",
+            "PIN_VM64_LD_LIBRARY_PATH",
             "PIN_LD_RESTORE_REQUIRED",
             "PIN_APP_LD_ASSUME_KERNEL",
             "PIN_APP_LD_LIBRARY_PATH",
@@ -57,7 +69,7 @@ void check_environment()
  * Prints the command line arguments.
  * @param child_argv Command line arguments array. Must be null terminated.
  */
-void print_argv_chunks(char** child_argv)
+static void print_argv_chunks(char** child_argv)
 {
     char** p = child_argv;
     unsigned int i = 0;
@@ -69,7 +81,22 @@ void print_argv_chunks(char** child_argv)
         i++;
     }
 }
+#endif
 
+static void update_environment_common(char* base_path)
+{
+#ifdef PIN_CRT
+    char buf[PATH_MAX];
+    if (NULL != realpath(base_path, buf))
+    {
+        strcat(buf, "/extras/crt/tzdata");
+        setenv("PIN_CRT_TZDATA", buf, 1);
+    }
+#endif
+    update_environment(base_path);
+}
+
+/* Pin launcher which runs pinbin */
 int main(int orig_argc, char** orig_argv)
 {
     char* path_to_cmd;
@@ -78,20 +105,24 @@ int main(int orig_argc, char** orig_argv)
     char* base_path;
     char* driver_name;
 
+    if (orig_argv == NULL || orig_argv[0] == NULL) abort();
     driver_name = find_driver_name(orig_argv[0]);
+    if (driver_name == NULL) abort();
     base_path = find_base_path(driver_name);
+    if (base_path == NULL) abort();
+    update_environment_common(base_path);
 
-    update_environment(base_path);
-
-    user_argv = build_user_argv(&user_argc);
-    child_argv = build_child_argv(base_path, orig_argc, orig_argv, user_argc,
-            user_argv);
+    user_argv  = build_user_argv(&user_argc);
+    child_argv = build_child_argv(base_path, orig_argc, orig_argv, user_argc, user_argv);
+    if (driver_name) free(driver_name);
+    if (base_path) free(base_path);
     path_to_cmd = child_argv[0];
 
-    /* For testing purposes
+    /* For testing purposes */
+#if 0
      check_environment();
      print_argv_chunks(child_argv);
-     */
+#endif
 
     return execv(path_to_cmd, child_argv);
 }

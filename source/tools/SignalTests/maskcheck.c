@@ -1,33 +1,14 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * This test prints the application's blocked signal mask at various points.
  * By comparing a native run with a run under Pin, we can verify that Pin emulates
@@ -38,23 +19,17 @@ END_LEGAL */
 #include <stdlib.h>
 #include <signal.h>
 
-#ifdef TARGET_ANDROID
-#include "android_ucontext.h"
-#else
 #include <sys/ucontext.h>
-#endif
 
-#if defined(TARGET_MAC) || (TARGET_ANDROID)
+#if defined(TARGET_MAC)
 #define MAXMASK 32
 #else
 #define MAXMASK 64
 #endif
 
-
 static void Handle(int);
-static void PrintCurrentMask(const char *);
-static void PrintMask(const char *, sigset_t *);
-
+static void PrintCurrentMask(const char*);
+static void PrintMask(const char*, sigset_t*);
 
 int main()
 {
@@ -73,7 +48,7 @@ int main()
     PrintCurrentMask("Initial: ");
 
     act.sa_handler = Handle;
-    act.sa_flags = SA_NODEFER;
+    act.sa_flags   = SA_NODEFER;
     sigemptyset(&act.sa_mask);
     sigaddset(&act.sa_mask, SIGSEGV);
     sigaddset(&act.sa_mask, SIGHUP);
@@ -116,7 +91,6 @@ int main()
     return 0;
 }
 
-
 static void Handle(int sig)
 {
     if (sig == SIGUSR1)
@@ -130,8 +104,7 @@ static void Handle(int sig)
     }
 }
 
-
-static void PrintCurrentMask(const char *prefix)
+static void PrintCurrentMask(const char* prefix)
 {
     sigset_t mask;
 
@@ -141,20 +114,18 @@ static void PrintCurrentMask(const char *prefix)
         printf("%s[ERROR]\n", prefix);
 }
 
-
-static void PrintMask(const char *prefix, sigset_t *mask)
+static void PrintMask(const char* prefix, sigset_t* mask)
 {
     int sig;
     int first;
 
     first = 1;
     printf("%s[", prefix);
-    for (sig = 1;  sig < MAXMASK;  sig++)
+    for (sig = 1; sig < MAXMASK; sig++)
     {
         if (sigismember(mask, sig))
         {
-            if (!first)
-                printf(" ");
+            if (!first) printf(" ");
             first = 0;
             printf("%d", sig);
         }

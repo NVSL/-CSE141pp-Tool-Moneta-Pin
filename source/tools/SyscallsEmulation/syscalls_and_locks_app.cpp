@@ -1,33 +1,14 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*!
  * The purpose of this application, combined with the tool: "syscalls_and_locks_tool", is to check the correctness of the
  * lock acquisition algorithm enhancement, which designed to be clone-proof for probe mode
@@ -45,25 +26,26 @@ END_LEGAL */
 
 #define TIMEOUT 120
 
-#define STACK_SIZE (1024 * 1024)    /* Stack size for cloned child */
+#define STACK_SIZE (1024 * 1024) /* Stack size for cloned child */
 #include <sys/syscall.h>
 
 volatile bool thread1Init = false;
 
 int syscall_type;
 
-enum ExitType {
-    RES_SUCCESS = 0,       // 1
-    RES_ALARM_TIMEOUT,     // 2
-    RES_MALLOC_FAILED,     // 3
-    RES_RES_INVALID_ARGS   // 4
+enum ExitType
+{
+    RES_SUCCESS = 0,     // 1
+    RES_ALARM_TIMEOUT,   // 2
+    RES_MALLOC_FAILED,   // 3
+    RES_RES_INVALID_ARGS // 4
 };
 
 // Pin doesn't kill the process if the application encounters a deadlock, exit on SIGALRM.
 void ExitOnAlarm(int sig)
 {
     fprintf(stderr, "Timeout has passed, stuck in the system function library call, exit on SIGALRM\n");
-    exit(RES_ALARM_TIMEOUT); 
+    exit(RES_ALARM_TIMEOUT);
 }
 
 // The tool puts an analysis routine on this function to notify t1
@@ -72,7 +54,7 @@ extern "C" void WaitThread2AcquireLock()
 {
     // do nothing
 }
- 
+
 // The tool sets an analysis function here to notify t1 when t2
 // has acquired and released the lock.
 extern "C" void WaitUntilLockAcquiredAndReleased()
@@ -81,13 +63,13 @@ extern "C" void WaitUntilLockAcquiredAndReleased()
 }
 
 // When the child process is created with clone(), it executes this function.
-int childFunc(void * arg)
+int childFunc(void* arg)
 {
     // Do nothing
     return 0;
 }
 
-void * thread_func1(void *arg)
+void* thread_func1(void* arg)
 {
     // Notify t2 that the lock should be acquired.
     thread1Init = true;
@@ -99,7 +81,7 @@ void * thread_func1(void *arg)
     // If syscall_type equals 1, the system function will be called
     // During this function call, the clone system call is called. We want to verify that
     // a deadlock won't be encountered while the lock is by t2.
-    if(syscall_type == 1)
+    if (syscall_type == 1)
     {
         system("/bin/ls");
     }
@@ -107,7 +89,7 @@ void * thread_func1(void *arg)
     // If syscall_type equals 2 the popen function will be called. This function opens a process by creating a pipe,
     // forking and invoking a the shell. We want to verify that a deadlock won't be encounter when this function is being
     // called while the lock is held by t2.
-    else if(syscall_type == 2)
+    else if (syscall_type == 2)
     {
         FILE* pipe = popen("uname -r", "r");
         pclose(pipe);
@@ -120,15 +102,15 @@ void * thread_func1(void *arg)
     // is being called while the lock is held  by t2.
     else if (syscall_type == 3 || syscall_type == 4)
     {
-        char *stack;
-        char *stackTop;
-        stack = (char *)malloc(STACK_SIZE);
+        char* stack;
+        char* stackTop;
+        stack = (char*)malloc(STACK_SIZE);
         if (stack == NULL) exit(RES_MALLOC_FAILED);
         stackTop = stack + STACK_SIZE;
 
         if (3 == syscall_type)
         {
-            clone(childFunc, stackTop, 0 , 0);
+            clone(childFunc, stackTop, 0, 0);
         }
         else if (4 == syscall_type)
         {
@@ -143,17 +125,18 @@ void * thread_func1(void *arg)
     return 0;
 }
 
-void * thread_func2 (void *arg)
+void* thread_func2(void* arg)
 {
     // Wait until t1 starts to run.
-    while(!thread1Init) sched_yield();
+    while (!thread1Init)
+        sched_yield();
 
     // Wait until the lock is acquired and released.
     WaitUntilLockAcquiredAndReleased();
 
     return 0;
 }
- 
+
 //  Expected argv arguments:
 //  [1] syscall type
 //    1 - execute the system function.
@@ -162,12 +145,12 @@ void * thread_func2 (void *arg)
 //        from that of the calling process.
 //    4 - execute the clone system call where the parent of the new child will be the same as
 //        that of the calling process.
-int main (int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    if(argc!=2)
+    if (argc != 2)
     {
-         fflush(stderr); 
-         exit(RES_RES_INVALID_ARGS);
+        fflush(stderr);
+        exit(RES_RES_INVALID_ARGS);
     }
 
     syscall_type = atoi(argv[1]);
@@ -175,17 +158,16 @@ int main (int argc, char *argv[])
     pthread_t t1;
     pthread_t t2;
 
-    pthread_create (&t1, 0, thread_func1, 0);
-    pthread_create (&t2, 0, thread_func2, 0);
-	
-    //Exit in 120 sec 
+    pthread_create(&t1, 0, thread_func1, 0);
+    pthread_create(&t2, 0, thread_func2, 0);
+
+    //Exit in 120 sec
     signal(SIGALRM, ExitOnAlarm);
     alarm(TIMEOUT);
-	
-    pthread_join (t1, 0);
-    pthread_join (t2, 0);
+
+    pthread_join(t1, 0);
+    pthread_join(t2, 0);
 
     printf("All threads exited. The test PASSED\n");
     return RES_SUCCESS;
 }
- 

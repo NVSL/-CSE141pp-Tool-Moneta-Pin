@@ -1,8 +1,12 @@
 /*
- * os_specific.h
- *
- *  Created on: May 28, 2012
- *      Author: bkemper
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
  */
 
 #ifndef OS_SPECIFIC_H_
@@ -31,6 +35,5 @@ char* find_driver_name(char* argv0);
  * @return A null terminated array with the required parameters to pin.
  */
 char** build_child_argv(char* base_path, int argc, char** argv, int user_argc, char** user_argv);
-
 
 #endif /* OS_SPECIFIC_H_ */

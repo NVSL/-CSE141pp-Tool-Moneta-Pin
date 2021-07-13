@@ -1,57 +1,38 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * This tool only runs with the application "intercept-app.cpp".  It's part
  * of a test for PIN_InterceptDebuggingEvent().
  */
- 
+
 #include <iostream>
 #include <cstdlib>
 #include "pin.H"
 #include "memlog.hpp"
+using std::string;
 
-static void InstrumentRtn(RTN, VOID *);
-static VOID InstrumentIns(INS, VOID *);
-static void OnCheckpoint(CONTEXT *);
+static void InstrumentRtn(RTN, VOID*);
+static VOID InstrumentIns(INS, VOID*);
+static void OnCheckpoint(CONTEXT*);
 static void OnMemWrite(ADDRINT, ADDRINT);
-static BOOL InterceptBreakpoint(THREADID, DEBUGGING_EVENT, CONTEXT *, VOID *);
-static void OnExit(INT32, VOID *);
+static BOOL InterceptBreakpoint(THREADID, DEBUGGING_EVENT, CONTEXT*, VOID*);
+static void OnExit(INT32, VOID*);
 
 static BOOL FoundCheckpoint = FALSE;
 static BOOL IsCheckpointing = FALSE;
 static CONTEXT SavedContext;
 static MEMLOG MemLog;
 
-
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
     PIN_Init(argc, argv);
     PIN_InitSymbols();
@@ -64,12 +45,11 @@ int main(int argc, char * argv[])
     return 0;
 }
 
-
 // When the application executes the Checkpoint() function, we take a snapshot of the
 // registers and start recording changes to memory.  This allows us to roll the application
 // back to the Checkpoint() call later.
 //
-static void InstrumentRtn(RTN rtn, VOID *)
+static void InstrumentRtn(RTN rtn, VOID*)
 {
     if (RTN_Name(rtn) == "Checkpoint")
     {
@@ -80,16 +60,15 @@ static void InstrumentRtn(RTN rtn, VOID *)
     }
 }
 
-static void InstrumentIns(INS ins, VOID *)
+static void InstrumentIns(INS ins, VOID*)
 {
     if (INS_IsMemoryWrite(ins))
     {
-        INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)OnMemWrite,
-            IARG_MEMORYWRITE_EA, IARG_MEMORYWRITE_SIZE, IARG_END);
+        INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)OnMemWrite, IARG_MEMORYWRITE_EA, IARG_MEMORYWRITE_SIZE, IARG_END);
     }
 }
 
-static void OnCheckpoint(CONTEXT *ctxt)
+static void OnCheckpoint(CONTEXT* ctxt)
 {
     PIN_SaveContext(ctxt, &SavedContext);
     IsCheckpointing = TRUE;
@@ -97,15 +76,13 @@ static void OnCheckpoint(CONTEXT *ctxt)
 
 static VOID OnMemWrite(ADDRINT addr, ADDRINT size)
 {
-    if (IsCheckpointing)
-        MemLog.Record(addr, size);
+    if (IsCheckpointing) MemLog.Record(addr, size);
 }
-
 
 // This function is called whenever Pin wants to report a breakpoint event to the
 // debugger.
 //
-static BOOL InterceptBreakpoint(THREADID tid, DEBUGGING_EVENT eventType, CONTEXT *ctxt, VOID *)
+static BOOL InterceptBreakpoint(THREADID tid, DEBUGGING_EVENT eventType, CONTEXT* ctxt, VOID*)
 {
     if (eventType != DEBUGGING_EVENT_BREAKPOINT)
     {
@@ -113,14 +90,15 @@ static BOOL InterceptBreakpoint(THREADID tid, DEBUGGING_EVENT eventType, CONTEXT
         std::exit(1);
     }
 
-    ADDRINT pc = PIN_GetContextReg(ctxt, REG_INST_PTR);
-    RTN rtn = RTN_FindByAddress(pc);
+    ADDRINT pc     = PIN_GetContextReg(ctxt, REG_INST_PTR);
+    RTN rtn        = RTN_FindByAddress(pc);
+    string rtnName = RTN_Valid(rtn) ? RTN_Name(rtn) : "<N/A>";
 
     // When the application triggers the breakpoint in Breakpoint1(), squash the breakpoint
     // and roll the application back to the Checkpoint() call.  The application will NOT stop
     // at the breakpoint, and it will immediately resume from Checkpoint().
     //
-    if (rtn != RTN_Invalid() && RTN_Name(rtn) == "Breakpoint1")
+    if (rtnName == "Breakpoint1")
     {
         std::cout << "Intercepting breakpoint #1 at 0x" << std::hex << pc << std::endl;
         PIN_SaveContext(&SavedContext, ctxt);
@@ -134,19 +112,19 @@ static BOOL InterceptBreakpoint(THREADID tid, DEBUGGING_EVENT eventType, CONTEXT
     // breakpoint, but change the return value from Breakpoint2().  The application will stop
     // in the debugger, and the debugger should see the modified return value.
     //
-    if (rtn != RTN_Invalid() && (RTN_Name(rtn) == "Breakpoint2" || RTN_Name(rtn) == "Breakpoint2Label"))
+    if (rtnName == "Breakpoint2" || rtnName == "Breakpoint2Label")
     {
         std::cout << "Intercepting breakpoint #2 at 0x" << std::hex << pc << std::endl;
-        std::cout << "RTN=" << RTN_Name(rtn) << std::endl;
+        std::cout << "RTN=" << rtnName << std::endl;
         PIN_SetContextReg(ctxt, REG_GAX, 1);
         return TRUE;
     }
 
-    std::cout << "Skipping breakpoint at 0x" << std::hex << pc << ", RTN=" << RTN_Name(rtn) << std::endl;
+    std::cout << "Skipping breakpoint at 0x" << std::hex << pc << ", RTN=" << rtnName << std::endl;
     return TRUE;
 }
 
-static void OnExit(INT32, VOID *)
+static void OnExit(INT32, VOID*)
 {
     if (!FoundCheckpoint)
     {

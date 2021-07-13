@@ -1,38 +1,18 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 //
 // This tool performs AOTI mutation of instructions.
 // It should be used with aoti_mutation_target.c, since it knows about the specific function names
 // in that code.
-// Jim Cownie September 2010
 //
 
 #include <stdio.h>
@@ -45,15 +25,14 @@ static int instrumentationCount = 0;
 
 static BOOL INS_HasImmediateOperand(INS ins)
 {
-    for (unsigned int i=0; i< INS_OperandCount(ins); i++)
-        if (INS_OperandIsImmediate(ins, i))
-            return TRUE;
+    for (unsigned int i = 0; i < INS_OperandCount(ins); i++)
+        if (INS_OperandIsImmediate(ins, i)) return TRUE;
 
     return FALSE;
 }
 
 // Delete the first mov immediate
-static VOID deleteMov (RTN rtn)
+static VOID deleteMov(RTN rtn)
 {
     for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins))
     {
@@ -67,7 +46,7 @@ static VOID deleteMov (RTN rtn)
 }
 
 // Insert a direct branch over the first mov immediate
-static VOID insertJump (RTN rtn)
+static VOID insertJump(RTN rtn)
 {
     for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins))
     {
@@ -80,21 +59,16 @@ static VOID insertJump (RTN rtn)
     }
 }
 
-static ADDRINT returnValue (ADDRINT arg)
-{
-    return arg;
-}
+static ADDRINT returnValue(ADDRINT arg) { return arg; }
 
 // Insert an indirect branch over the first mov immediate
-static VOID insertIndirectJump (RTN rtn)
+static VOID insertIndirectJump(RTN rtn)
 {
     for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins))
     {
         if (INS_IsMov(ins) && INS_HasImmediateOperand(ins))
         {
-            INS_InsertCall(ins, IPOINT_BEFORE,
-                           AFUNPTR(returnValue),
-                           IARG_ADDRINT, INS_Address(ins) + INS_Size(ins),
+            INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(returnValue), IARG_ADDRINT, INS_Address(ins) + INS_Size(ins),
                            IARG_RETURN_REGS, scratchReg, IARG_END);
 
             INS_InsertIndirectJump(ins, IPOINT_BEFORE, scratchReg);
@@ -104,49 +78,37 @@ static VOID insertIndirectJump (RTN rtn)
     }
 }
 
-static ADDRINT returnValueMinus4 (ADDRINT arg)
+static ADDRINT returnValueMinus4(ADDRINT arg)
 {
-    ADDRINT retVal = arg-4;
-    
-    printf ("returnValueMinus4 returns %x\n", retVal);
+    ADDRINT retVal = arg - 4;
+
+    printf("returnValueMinus4 returns %x\n", retVal);
     return (retVal);
 }
 
-VOID AddrValueA (ADDRINT address)
-{
-    printf ("AddrValueA is %x\n", address);
-}
+VOID AddrValueA(ADDRINT address) { printf("AddrValueA is %x\n", address); }
 
-VOID AddrValueB (ADDRINT address)
-{
-    printf ("AddrValueB is %x\n", address);
-}
+VOID AddrValueB(ADDRINT address) { printf("AddrValueB is %x\n", address); }
 
 // Offset the addressing of the first "or" instruction back by 4 bytes.
-static VOID modifyAddressing (RTN rtn)
+static VOID modifyAddressing(RTN rtn)
 {
     for (INS ins = RTN_InsHead(rtn); INS_Valid(ins); ins = INS_Next(ins))
     {
         if (INS_Opcode(ins) == XED_ICLASS_OR)
         {
-            printf ("Rewriting address of ins\n%x: %s\n", INS_Address(ins), INS_Disassemble(ins).c_str());
+            printf("Rewriting address of ins\n%x: %s\n", INS_Address(ins), INS_Disassemble(ins).c_str());
 
             // pass the original memory address accessed by the app instruction (i.e. before the rewrite) to AddrValueA
-            INS_InsertCall(ins, IPOINT_BEFORE,
-                           AFUNPTR(AddrValueA),
-                           IARG_MEMORYOP_EA, 0, IARG_END);
+            INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(AddrValueA), IARG_MEMORYOP_EA, 0, IARG_END);
 
-            INS_InsertCall(ins, IPOINT_BEFORE,
-                           AFUNPTR(returnValueMinus4),
-                           IARG_MEMORYOP_EA, 0,
-                           IARG_RETURN_REGS, scratchReg, IARG_END);
+            INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(returnValueMinus4), IARG_MEMORYOP_EA, 0, IARG_RETURN_REGS, scratchReg,
+                           IARG_END);
 
             INS_RewriteMemoryOperand(ins, 0, scratchReg);
 
             // pass the original memory address accessed by the app instruction (i.e. before the rewrite) to AddrValueB
-            INS_InsertCall(ins, IPOINT_BEFORE,
-                           AFUNPTR(AddrValueB),
-                           IARG_MEMORYOP_EA, 0, IARG_END);
+            INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(AddrValueB), IARG_MEMORYOP_EA, 0, IARG_END);
 
             instrumentationCount++;
             return;
@@ -154,21 +116,20 @@ static VOID modifyAddressing (RTN rtn)
     }
 }
 
-static struct {
-    const char * rtnName;
-    void (*instrumentFunction)(RTN);
-} functionInstrumentation[] = {
-    {"deleteMov",         deleteMov },
-    {"insertJump",        insertJump},
-    {"insertIndirectJump",insertIndirectJump},
-    {"modifyAddressing",  modifyAddressing}
-};
-
-VOID ImageLoad(IMG img, VOID *v)
+static struct
 {
-    for (UINT32 i=0; i<sizeof(functionInstrumentation)/sizeof(functionInstrumentation[0]); i++)
+    const char* rtnName;
+    void (*instrumentFunction)(RTN);
+} functionInstrumentation[] = {{"deleteMov", deleteMov},
+                               {"insertJump", insertJump},
+                               {"insertIndirectJump", insertIndirectJump},
+                               {"modifyAddressing", modifyAddressing}};
+
+VOID ImageLoad(IMG img, VOID* v)
+{
+    for (UINT32 i = 0; i < sizeof(functionInstrumentation) / sizeof(functionInstrumentation[0]); i++)
     {
-        RTN rtn = RTN_FindByName (img, functionInstrumentation[i].rtnName);
+        RTN rtn = RTN_FindByName(img, functionInstrumentation[i].rtnName);
 
         if (RTN_Valid(rtn))
         {
@@ -176,14 +137,14 @@ VOID ImageLoad(IMG img, VOID *v)
             RTN_Open(rtn);
             functionInstrumentation[i].instrumentFunction(rtn);
             RTN_Close(rtn);
-        }            
+        }
     }
 }
 
-VOID Fini(INT32 code, VOID *v)
+VOID Fini(INT32 code, VOID* v)
 {
     // Check that we ran all the tests we expected!
-    if (instrumentationCount != sizeof(functionInstrumentation)/sizeof(functionInstrumentation[0]))
+    if (instrumentationCount != sizeof(functionInstrumentation) / sizeof(functionInstrumentation[0]))
     {
         exit(1);
     }
@@ -193,7 +154,7 @@ VOID Fini(INT32 code, VOID *v)
 /* Main                                                                  */
 /* ===================================================================== */
 
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
     // prepare for image instrumentation mode
     PIN_InitSymbols();
@@ -210,6 +171,6 @@ int main(int argc, char * argv[])
 
     // Start the program, never returns
     PIN_StartProgram();
-    
+
     return 0;
 }

@@ -1,36 +1,15 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
-
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
-//
-// @ORIGINAL_AUTHOR: Artur Klauser
-//
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software and the related documents are Intel copyrighted materials, and your
+ * use of them is governed by the express license under which they were provided to
+ * you ("License"). Unless the License provides otherwise, you may not use, modify,
+ * copy, publish, distribute, disclose or transmit this software or the related
+ * documents without Intel's prior written permission.
+ * 
+ * This software and the related documents are provided as is, with no express or
+ * implied warranties, other than those that are expressly stated in the License.
+ */
 
 /*! @file
  *  This file contains a configurable cache class
@@ -47,10 +26,7 @@ END_LEGAL */
  *  @brief Checks if n is a power of 2.
  *  @returns true if n is power of 2
  */
-static inline bool IsPower2(UINT32 n)
-{
-    return ((n & (n - 1)) == 0);
-}
+static inline bool IsPower2(UINT32 n) { return ((n & (n - 1)) == 0); }
 
 /*!
  *  @brief Computes floor(log2(n))
@@ -63,11 +39,30 @@ static inline INT32 FloorLog2(UINT32 n)
 
     if (n == 0) return -1;
 
-    if (n & 0xffff0000) { p += 16; n >>= 16; }
-    if (n & 0x0000ff00)	{ p +=  8; n >>=  8; }
-    if (n & 0x000000f0) { p +=  4; n >>=  4; }
-    if (n & 0x0000000c) { p +=  2; n >>=  2; }
-    if (n & 0x00000002) { p +=  1; }
+    if (n & 0xffff0000)
+    {
+        p += 16;
+        n >>= 16;
+    }
+    if (n & 0x0000ff00)
+    {
+        p += 8;
+        n >>= 8;
+    }
+    if (n & 0x000000f0)
+    {
+        p += 4;
+        n >>= 4;
+    }
+    if (n & 0x0000000c)
+    {
+        p += 2;
+        n >>= 2;
+    }
+    if (n & 0x00000002)
+    {
+        p += 1;
+    }
 
     return p;
 }
@@ -77,10 +72,7 @@ static inline INT32 FloorLog2(UINT32 n)
  *  Works by finding position of MSB set.
  *  @returns -1 if n == 0.
  */
-static inline INT32 CeilLog2(UINT32 n)
-{
-    return FloorLog2(n - 1) + 1;
-}
+static inline INT32 CeilLog2(UINT32 n) { return FloorLog2(n - 1) + 1; }
 
 /*!
  *  @brief Cache tag - self clearing on creation
@@ -92,17 +84,15 @@ class CACHE_TAG
 
   public:
     CACHE_TAG(ADDRINT tag = 0) { _tag = tag; }
-    bool operator==(const CACHE_TAG &right) const { return _tag == right._tag; }
+    bool operator==(const CACHE_TAG& right) const { return _tag == right._tag; }
     operator ADDRINT() const { return _tag; }
 };
-
 
 /*!
  * Everything related to cache sets
  */
 namespace CACHE_SET
 {
-
 /*!
  *  @brief Cache set direct mapped
  */
@@ -117,7 +107,7 @@ class DIRECT_MAPPED
     VOID SetAssociativity(UINT32 associativity) { ASSERTX(associativity == 1); }
     UINT32 GetAssociativity(UINT32 associativity) { return 1; }
 
-    UINT32 Find(CACHE_TAG tag) { return(_tag == tag); }
+    UINT32 Find(CACHE_TAG tag) { return (_tag == tag); }
     VOID Replace(CACHE_TAG tag) { _tag = tag; }
     VOID Flush() { _tag = 0; }
 };
@@ -125,8 +115,7 @@ class DIRECT_MAPPED
 /*!
  *  @brief Cache set with round robin replacement
  */
-template <UINT32 MAX_ASSOCIATIVITY = 4>
-class ROUND_ROBIN
+template< UINT32 MAX_ASSOCIATIVITY = 4 > class ROUND_ROBIN
 {
   private:
     CACHE_TAG _tags[MAX_ASSOCIATIVITY];
@@ -134,8 +123,7 @@ class ROUND_ROBIN
     UINT32 _nextReplaceIndex;
 
   public:
-    ROUND_ROBIN(UINT32 associativity = MAX_ASSOCIATIVITY)
-      : _tagsLastIndex(associativity - 1)
+    ROUND_ROBIN(UINT32 associativity = MAX_ASSOCIATIVITY) : _tagsLastIndex(associativity - 1)
     {
         ASSERTX(associativity <= MAX_ASSOCIATIVITY);
         _nextReplaceIndex = _tagsLastIndex;
@@ -149,11 +137,11 @@ class ROUND_ROBIN
     VOID SetAssociativity(UINT32 associativity)
     {
         ASSERTX(associativity <= MAX_ASSOCIATIVITY);
-        _tagsLastIndex = associativity - 1;
+        _tagsLastIndex    = associativity - 1;
         _nextReplaceIndex = _tagsLastIndex;
     }
     UINT32 GetAssociativity(UINT32 associativity) { return _tagsLastIndex + 1; }
-    
+
     UINT32 Find(CACHE_TAG tag)
     {
         bool result = true;
@@ -162,11 +150,12 @@ class ROUND_ROBIN
         {
             // this is an ugly micro-optimization, but it does cause a
             // tighter assembly loop for ARM that way ...
-            if(_tags[index] == tag) goto end;
+            if (_tags[index] == tag) goto end;
         }
         result = false;
 
-        end: return result;
+    end:
+        return result;
     }
 
     VOID Replace(CACHE_TAG tag)
@@ -180,11 +169,11 @@ class ROUND_ROBIN
     }
     VOID Flush()
     {
-      for (INT32 index = _tagsLastIndex; index >= 0; index--)
-      {
-	_tags[index] = 0;
-      }
-      _nextReplaceIndex=_tagsLastIndex;
+        for (INT32 index = _tagsLastIndex; index >= 0; index--)
+        {
+            _tags[index] = 0;
+        }
+        _nextReplaceIndex = _tagsLastIndex;
     }
 };
 
@@ -192,11 +181,11 @@ class ROUND_ROBIN
 
 namespace CACHE_ALLOC
 {
-    typedef enum 
-    {
-        STORE_ALLOCATE,
-        STORE_NO_ALLOCATE
-    } STORE_ALLOCATION;
+typedef enum
+{
+    STORE_ALLOCATE,
+    STORE_NO_ALLOCATE
+} STORE_ALLOCATION;
 }
 
 /*!
@@ -206,7 +195,7 @@ class CACHE_BASE
 {
   public:
     // types, constants
-    typedef enum 
+    typedef enum
     {
         ACCESS_TYPE_LOAD,
         ACCESS_TYPE_STORE,
@@ -254,65 +243,54 @@ class CACHE_BASE
     UINT32 LineSize() const { return _lineSize; }
     UINT32 Associativity() const { return _associativity; }
     //
-    CACHE_STATS Hits(ACCESS_TYPE accessType) const { return _access[accessType][true];}
-    CACHE_STATS Misses(ACCESS_TYPE accessType) const { return _access[accessType][false];}
-    CACHE_STATS Accesses(ACCESS_TYPE accessType) const { return Hits(accessType) + Misses(accessType);}
-    CACHE_STATS Hits() const { return SumAccess(true);}
-    CACHE_STATS Misses() const { return SumAccess(false);}
-    CACHE_STATS Accesses() const { return Hits() + Misses();}
+    CACHE_STATS Hits(ACCESS_TYPE accessType) const { return _access[accessType][true]; }
+    CACHE_STATS Misses(ACCESS_TYPE accessType) const { return _access[accessType][false]; }
+    CACHE_STATS Accesses(ACCESS_TYPE accessType) const { return Hits(accessType) + Misses(accessType); }
+    CACHE_STATS Hits() const { return SumAccess(true); }
+    CACHE_STATS Misses() const { return SumAccess(false); }
+    CACHE_STATS Accesses() const { return Hits() + Misses(); }
 
-    CACHE_STATS Flushes() const { return _numberOfFlushes;}
-    CACHE_STATS Resets() const { return _numberOfResets;}
+    CACHE_STATS Flushes() const { return _numberOfFlushes; }
+    CACHE_STATS Resets() const { return _numberOfResets; }
 
-    VOID SplitAddress(const ADDRINT addr, CACHE_TAG & tag, UINT32 & setIndex) const
+    VOID SplitAddress(const ADDRINT addr, CACHE_TAG& tag, UINT32& setIndex) const
     {
-        tag = addr >> _lineShift;
+        tag      = addr >> _lineShift;
         setIndex = tag & _setIndexMask;
     }
 
-    VOID SplitAddress(const ADDRINT addr, CACHE_TAG & tag, UINT32 & setIndex, UINT32 & lineIndex) const
+    VOID SplitAddress(const ADDRINT addr, CACHE_TAG& tag, UINT32& setIndex, UINT32& lineIndex) const
     {
         const UINT32 lineMask = _lineSize - 1;
-        lineIndex = addr & lineMask;
+        lineIndex             = addr & lineMask;
         SplitAddress(addr, tag, setIndex);
     }
 
-    VOID IncFlushCounter()
-    {
-	_numberOfFlushes += 1;
-    }
+    VOID IncFlushCounter() { _numberOfFlushes += 1; }
 
-    VOID IncResetCounter()
-    {
-	_numberOfResets += 1;
-    }
+    VOID IncResetCounter() { _numberOfResets += 1; }
 
-    std::ostream & StatsLong(std::ostream & out) const;
+    std::ostream& StatsLong(std::ostream& out) const;
 };
 
 CACHE_BASE::CACHE_BASE(std::string name, UINT32 cacheSize, UINT32 lineSize, UINT32 associativity)
-  : _name(name),
-    _cacheSize(cacheSize),
-    _lineSize(lineSize),
-    _associativity(associativity),
-    _lineShift(FloorLog2(lineSize)),
-    _setIndexMask((cacheSize / (associativity * lineSize)) - 1)
+    : _name(name), _cacheSize(cacheSize), _lineSize(lineSize), _associativity(associativity), _lineShift(FloorLog2(lineSize)),
+      _setIndexMask((cacheSize / (associativity * lineSize)) - 1)
 {
-
     ASSERTX(IsPower2(_lineSize));
     ASSERTX(IsPower2(_setIndexMask + 1));
 
     for (UINT32 accessType = 0; accessType < ACCESS_TYPE_NUM; accessType++)
     {
         _access[accessType][false] = 0;
-        _access[accessType][true] = 0;
+        _access[accessType][true]  = 0;
     }
 }
 
 /*!
  *  @brief Stats output method
  */
-std::ostream & CACHE_BASE::StatsLong(std::ostream & out) const
+std::ostream& CACHE_BASE::StatsLong(std::ostream& out) const
 {
     const UINT32 headerWidth = 19;
     const UINT32 numberWidth = 10;
@@ -325,30 +303,22 @@ std::ostream & CACHE_BASE::StatsLong(std::ostream & out) const
 
         std::string type(accessType == ACCESS_TYPE_LOAD ? "Load" : "Store");
 
-        out << StringString(type + " Hits:      ", headerWidth)
-            << StringInt(Hits(accessType), numberWidth) << std::endl;
-        out << StringString(type + " Misses:    ", headerWidth)
-            << StringInt(Misses(accessType), numberWidth) << std::endl;
-        out << StringString(type + " Accesses:  ", headerWidth)
-            << StringInt(Accesses(accessType), numberWidth) << std::endl;
+        out << StringString(type + " Hits:      ", headerWidth) << StringInt(Hits(accessType), numberWidth) << std::endl;
+        out << StringString(type + " Misses:    ", headerWidth) << StringInt(Misses(accessType), numberWidth) << std::endl;
+        out << StringString(type + " Accesses:  ", headerWidth) << StringInt(Accesses(accessType), numberWidth) << std::endl;
         out << StringString(type + " Miss Rate: ", headerWidth)
-            << StringFlt(100.0 * Misses(accessType) / Accesses(accessType), 2, numberWidth-1) << "%" << std::endl;
+            << StringFlt(100.0 * Misses(accessType) / Accesses(accessType), 2, numberWidth - 1) << "%" << std::endl;
         out << std::endl;
     }
 
-    out << StringString("Total Hits:      ", headerWidth, ' ')
-        << StringInt(Hits(), numberWidth) << std::endl;
-    out << StringString("Total Misses:    ", headerWidth, ' ')
-        << StringInt(Misses(), numberWidth) << std::endl;
-    out << StringString("Total Accesses:  ", headerWidth, ' ')
-        << StringInt(Accesses(), numberWidth) << std::endl;
-    out << StringString("Total Miss Rate: ", headerWidth, ' ')
-        << StringFlt(100.0 * Misses() / Accesses(), 2, numberWidth-1) << "%" << std::endl;
+    out << StringString("Total Hits:      ", headerWidth, ' ') << StringInt(Hits(), numberWidth) << std::endl;
+    out << StringString("Total Misses:    ", headerWidth, ' ') << StringInt(Misses(), numberWidth) << std::endl;
+    out << StringString("Total Accesses:  ", headerWidth, ' ') << StringInt(Accesses(), numberWidth) << std::endl;
+    out << StringString("Total Miss Rate: ", headerWidth, ' ') << StringFlt(100.0 * Misses() / Accesses(), 2, numberWidth - 1)
+        << "%" << std::endl;
 
-    out << StringString("Flushes:         ", headerWidth, ' ')
-        << StringInt(Flushes(), numberWidth) << std::endl;
-    out << StringString("Stat Resets:     ", headerWidth, ' ')
-        << StringInt(Resets(), numberWidth) << std::endl;
+    out << StringString("Flushes:         ", headerWidth, ' ') << StringInt(Flushes(), numberWidth) << std::endl;
+    out << StringString("Stat Resets:     ", headerWidth, ' ') << StringInt(Resets(), numberWidth) << std::endl;
 
     out << std::endl;
 
@@ -356,10 +326,7 @@ std::ostream & CACHE_BASE::StatsLong(std::ostream & out) const
 }
 
 /// ostream operator for CACHE_BASE
-std::ostream & operator<< (std::ostream & out, const CACHE_BASE & cacheBase)
-{
-    return cacheBase.StatsLong(out);
-}
+std::ostream& operator<<(std::ostream& out, const CACHE_BASE& cacheBase) { return cacheBase.StatsLong(out); }
 
 /*!
  *  @brief Templated cache class with specific cache set allocation policies
@@ -367,8 +334,7 @@ std::ostream & operator<< (std::ostream & out, const CACHE_BASE & cacheBase)
  *  All that remains to be done here is allocate and deallocate the right
  *  type of cache sets.
  */
-template <class SET, UINT32 MAX_SETS, UINT32 STORE_ALLOCATION>
-class CACHE : public CACHE_BASE
+template< class SET, UINT32 MAX_SETS, UINT32 STORE_ALLOCATION > class CACHE : public CACHE_BASE
 {
   private:
     SET _sets[MAX_SETS];
@@ -376,7 +342,7 @@ class CACHE : public CACHE_BASE
   public:
     // constructors/destructors
     CACHE(std::string name, UINT32 cacheSize, UINT32 lineSize, UINT32 associativity)
-      : CACHE_BASE(name, cacheSize, lineSize, associativity)
+        : CACHE_BASE(name, cacheSize, lineSize, associativity)
     {
         ASSERTX(NumSets() <= MAX_SETS);
 
@@ -399,13 +365,13 @@ class CACHE : public CACHE_BASE
  *  @return true if all accessed cache lines hit
  */
 
-template <class SET, UINT32 MAX_SETS, UINT32 STORE_ALLOCATION>
-bool CACHE<SET,MAX_SETS,STORE_ALLOCATION>::Access(ADDRINT addr, UINT32 size, ACCESS_TYPE accessType)
+template< class SET, UINT32 MAX_SETS, UINT32 STORE_ALLOCATION >
+bool CACHE< SET, MAX_SETS, STORE_ALLOCATION >::Access(ADDRINT addr, UINT32 size, ACCESS_TYPE accessType)
 {
     const ADDRINT highAddr = addr + size;
-    bool allHit = true;
+    bool allHit            = true;
 
-    const ADDRINT lineSize = LineSize();
+    const ADDRINT lineSize    = LineSize();
     const ADDRINT notLineMask = ~(lineSize - 1);
     do
     {
@@ -414,13 +380,13 @@ bool CACHE<SET,MAX_SETS,STORE_ALLOCATION>::Access(ADDRINT addr, UINT32 size, ACC
 
         SplitAddress(addr, tag, setIndex);
 
-        SET & set = _sets[setIndex];
+        SET& set = _sets[setIndex];
 
         bool localHit = set.Find(tag);
         allHit &= localHit;
 
         // on miss, loads always allocate, stores optionally
-        if ( (! localHit) && (accessType == ACCESS_TYPE_LOAD || STORE_ALLOCATION == CACHE_ALLOC::STORE_ALLOCATE))
+        if ((!localHit) && (accessType == ACCESS_TYPE_LOAD || STORE_ALLOCATION == CACHE_ALLOC::STORE_ALLOCATE))
         {
             set.Replace(tag);
         }
@@ -437,20 +403,20 @@ bool CACHE<SET,MAX_SETS,STORE_ALLOCATION>::Access(ADDRINT addr, UINT32 size, ACC
 /*!
  *  @return true if accessed cache line hits
  */
-template <class SET, UINT32 MAX_SETS, UINT32 STORE_ALLOCATION>
-bool CACHE<SET,MAX_SETS,STORE_ALLOCATION>::AccessSingleLine(ADDRINT addr, ACCESS_TYPE accessType)
+template< class SET, UINT32 MAX_SETS, UINT32 STORE_ALLOCATION >
+bool CACHE< SET, MAX_SETS, STORE_ALLOCATION >::AccessSingleLine(ADDRINT addr, ACCESS_TYPE accessType)
 {
     CACHE_TAG tag;
     UINT32 setIndex;
 
     SplitAddress(addr, tag, setIndex);
 
-    SET & set = _sets[setIndex];
+    SET& set = _sets[setIndex];
 
     bool hit = set.Find(tag);
 
     // on miss, loads always allocate, stores optionally
-    if ( (! hit) && (accessType == ACCESS_TYPE_LOAD || STORE_ALLOCATION == CACHE_ALLOC::STORE_ALLOCATE))
+    if ((!hit) && (accessType == ACCESS_TYPE_LOAD || STORE_ALLOCATION == CACHE_ALLOC::STORE_ALLOCATE))
     {
         set.Replace(tag);
     }
@@ -462,30 +428,29 @@ bool CACHE<SET,MAX_SETS,STORE_ALLOCATION>::AccessSingleLine(ADDRINT addr, ACCESS
 /*!
  *  @return true if accessed cache line hits
  */
-template <class SET, UINT32 MAX_SETS, UINT32 STORE_ALLOCATION>
-void CACHE<SET,MAX_SETS,STORE_ALLOCATION>::Flush()
+template< class SET, UINT32 MAX_SETS, UINT32 STORE_ALLOCATION > void CACHE< SET, MAX_SETS, STORE_ALLOCATION >::Flush()
 {
-    for (INT32 index = NumSets(); index >= 0; index--) {
-      SET & set = _sets[index];
-      set.Flush();
+    for (INT32 index = NumSets(); index >= 0; index--)
+    {
+        SET& set = _sets[index];
+        set.Flush();
     }
     IncFlushCounter();
 }
 
-template <class SET, UINT32 MAX_SETS, UINT32 STORE_ALLOCATION>
-void CACHE<SET,MAX_SETS,STORE_ALLOCATION>::ResetStats()
+template< class SET, UINT32 MAX_SETS, UINT32 STORE_ALLOCATION > void CACHE< SET, MAX_SETS, STORE_ALLOCATION >::ResetStats()
 {
     for (UINT32 accessType = 0; accessType < ACCESS_TYPE_NUM; accessType++)
     {
-	_access[accessType][false] = 0;
-	_access[accessType][true] = 0;
+        _access[accessType][false] = 0;
+        _access[accessType][true]  = 0;
     }
     IncResetCounter();
 }
 
-
 // define shortcuts
-#define CACHE_DIRECT_MAPPED(MAX_SETS, ALLOCATION) CACHE<CACHE_SET::DIRECT_MAPPED, MAX_SETS, ALLOCATION>
-#define CACHE_ROUND_ROBIN(MAX_SETS, MAX_ASSOCIATIVITY, ALLOCATION) CACHE<CACHE_SET::ROUND_ROBIN<MAX_ASSOCIATIVITY>, MAX_SETS, ALLOCATION>
+#define CACHE_DIRECT_MAPPED(MAX_SETS, ALLOCATION) CACHE< CACHE_SET::DIRECT_MAPPED, MAX_SETS, ALLOCATION >
+#define CACHE_ROUND_ROBIN(MAX_SETS, MAX_ASSOCIATIVITY, ALLOCATION) \
+    CACHE< CACHE_SET::ROUND_ROBIN< MAX_ASSOCIATIVITY >, MAX_SETS, ALLOCATION >
 
 #endif // PIN_CACHE_H

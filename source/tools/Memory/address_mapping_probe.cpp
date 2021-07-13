@@ -1,51 +1,31 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
 #include <assert.h>
 #include "pin.H"
+using std::string;
+using std::vector;
 
 /* ===================================================================== */
 /* Commandline Switches */
 /* ===================================================================== */
 
-KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE,    "pintool",
-    "o", "address_mapping_probe.out", "specify output file name");
+KNOB< string > KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool", "o", "address_mapping_probe.out", "specify output file name");
 
-KNOB<BOOL> KnobGenerateOOM(KNOB_MODE_WRITEONCE,    "pintool",
-    "m", "0", "generate an out of memory condition");
+KNOB< BOOL > KnobGenerateOOM(KNOB_MODE_WRITEONCE, "pintool", "m", "0", "generate an out of memory condition");
 
-KNOB<ADDRESS_RANGE> KnobMemoryBoundary(KNOB_MODE_WRITEONCE,    "pintool",
-    "b", "0:0", "The memory boundary to check");
+KNOB< ADDRESS_RANGE > KnobMemoryBoundary(KNOB_MODE_WRITEONCE, "pintool", "b", "0:0", "The memory boundary to check");
 
 //Before PIN initialized, it is using a small pre-allocated memory pool for all dynamic
 //memory allocation. This pre-allocated pool is outside the specified region for memory
@@ -62,7 +42,12 @@ static const int MALLOC_POOL_SIZE = 0x10000;
 #else
 //Size of PIN's malloc pool for small memory allocations
 static const int MALLOC_POOL_SIZE = 0x1000;
+#endif
+
 //The total size of PIN's initial allocator, the one that allocates memory before PIN initializes
+#if defined(TARGET_MAC)
+static const int BSS_ALLOCATOR_SIZE = 0x1300000;
+#else
 static const int BSS_ALLOCATOR_SIZE = 0xc0000;
 #endif
 
@@ -71,7 +56,7 @@ static const int BSS_ALLOCATOR_SIZE = 0xc0000;
 /* ===================================================================== */
 
 //Output file
-FILE * out;
+FILE* out;
 
 void* AllocateAndCheckAddressRange(size_t sz, int retries = 0)
 {
@@ -119,17 +104,17 @@ VOID OutOfMemory(size_t sz, VOID* arg)
 
 VOID TestMemory()
 {
-    vector<void*> smallMallocs;
+    vector< void* > smallMallocs;
 #ifndef TARGET_WINDOWS
     //Skip memory allocated by the BSS allocator
-    void* initialPtr = AllocateAndCheckAddressRange(MALLOC_POOL_SIZE, BSS_ALLOCATOR_SIZE/MALLOC_POOL_SIZE);
+    void* initialPtr = AllocateAndCheckAddressRange(MALLOC_POOL_SIZE, BSS_ALLOCATOR_SIZE / MALLOC_POOL_SIZE);
     free(initialPtr);
 #endif
-// Allocation for big memory region: This malloc should allocate memory directly from the OS
+    // Allocation for big memory region: This malloc should allocate memory directly from the OS
     void* bigMalloc = AllocateAndCheckAddressRange(0x100000); //This malloc should allocate memory directly from the OS
     for (int i = 4; i < 0x10000; i *= 2)
     {
-// Allocation for small memory region: This malloc should allocate memory from a memory pool
+        // Allocation for small memory region: This malloc should allocate memory from a memory pool
         void* smallOne = AllocateAndCheckAddressRange(i);
         smallMallocs.push_back(smallOne);
     }
@@ -138,12 +123,12 @@ VOID TestMemory()
         void* p = AllocateAndCheckAddressRange(0x10000);
         if (!KnobGenerateOOM.Value())
         {
-        	//In order to generate an out of memory - just don't free the allocated pointers
+            //In order to generate an out of memory - just don't free the allocated pointers
             free(p);
         }
     }
     free(bigMalloc);
-    for (vector<void*>::iterator it = smallMallocs.begin(); it != smallMallocs.end(); it++)
+    for (vector< void* >::iterator it = smallMallocs.begin(); it != smallMallocs.end(); it++)
     {
         free(*it);
     }
@@ -151,7 +136,7 @@ VOID TestMemory()
     fclose(out);
 }
 
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
     PIN_Init(argc, argv);
 

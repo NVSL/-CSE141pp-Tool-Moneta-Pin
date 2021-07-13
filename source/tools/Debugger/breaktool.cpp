@@ -1,58 +1,34 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 #include <fstream>
 #include <iostream>
 #include <cstdlib>
 #include "pin.H"
 
-KNOB<std::string> KnobWhere(KNOB_MODE_WRITEONCE, "pintool",
-    "where", "", "Name of function where breakpoint is triggered.  If not specified, stop at first instruction.");
-KNOB<BOOL> KnobWaitForDebugger(KNOB_MODE_WRITEONCE, "pintool",
-    "wait_for_debugger", "0", "Wait for debugger to connect");
-KNOB<std::string> KnobPort(KNOB_MODE_WRITEONCE, "pintool",
-    "port", "", "Output file where TCP information is written");
-KNOB<BOOL> KnobUseIargConstContext(KNOB_MODE_WRITEONCE, "pintool",
-                                   "const_context", "0", "use IARG_CONST_CONTEXT");
+KNOB< std::string > KnobWhere(KNOB_MODE_WRITEONCE, "pintool", "where", "",
+                              "Name of function where breakpoint is triggered.  If not specified, stop at first instruction.");
+KNOB< BOOL > KnobWaitForDebugger(KNOB_MODE_WRITEONCE, "pintool", "wait_for_debugger", "0", "Wait for debugger to connect");
+KNOB< std::string > KnobPort(KNOB_MODE_WRITEONCE, "pintool", "port", "", "Output file where TCP information is written");
+KNOB< BOOL > KnobUseIargConstContext(KNOB_MODE_WRITEONCE, "pintool", "const_context", "0", "use IARG_CONST_CONTEXT");
 
-
-BOOL FoundWhere = FALSE;
+BOOL FoundWhere        = FALSE;
 BOOL IsFirstBreakpoint = TRUE;
 
-static void InstrumentRtn(RTN, VOID *);
-static void InstrumentIns(INS, VOID *);
-static void DoBreakpoint(CONTEXT *, THREADID);
-static void OnExit(INT32, VOID *);
+static void InstrumentRtn(RTN, VOID*);
+static void InstrumentIns(INS, VOID*);
+static void DoBreakpoint(CONTEXT*, THREADID);
+static void OnExit(INT32, VOID*);
 
-
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
     PIN_Init(argc, argv);
     PIN_InitSymbols();
@@ -85,16 +61,15 @@ int main(int argc, char * argv[])
     return 0;
 }
 
-static void InstrumentRtn(RTN rtn, VOID *)
+static void InstrumentRtn(RTN rtn, VOID*)
 {
     if (RTN_Name(rtn) == KnobWhere.Value())
     {
         RTN_Open(rtn);
         INS ins = RTN_InsHeadOnly(rtn);
-        INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(DoBreakpoint), 
-                       (KnobUseIargConstContext)?IARG_CONST_CONTEXT:IARG_CONTEXT,
-                       // IARG_CONST_CONTEXT has much lower overhead 
-                       // than IARG_CONTEX for passing the CONTEXT* 
+        INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(DoBreakpoint), (KnobUseIargConstContext) ? IARG_CONST_CONTEXT : IARG_CONTEXT,
+                       // IARG_CONST_CONTEXT has much lower overhead
+                       // than IARG_CONTEX for passing the CONTEXT*
                        // to the analysis routine. Note that IARG_CONST_CONTEXT
                        // passes a read-only CONTEXT* to the analysis routine
                        IARG_THREAD_ID, IARG_END);
@@ -103,22 +78,30 @@ static void InstrumentRtn(RTN rtn, VOID *)
     }
 }
 
-static void InstrumentIns(INS ins, VOID *)
+static void InstrumentIns(INS ins, VOID*)
 {
     if (!FoundWhere)
     {
+#if defined(TARGET_MAC)
+        if (PIN_GetDebugStatus() != DEBUG_STATUS_CONNECTED)
+        {
+            // On macOS in launch mode, a debugger connection is established after the application has already started running
+            // in the earliest point it is safe to do so. So, Jitting of the application start before we reach that point.
+            // Therefore we return here until the the debugger connection session has started.
+            return;
+        }
+#endif
         FoundWhere = TRUE;
-        INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(DoBreakpoint), 
-                       (KnobUseIargConstContext)?IARG_CONST_CONTEXT:IARG_CONTEXT, 
-                       // IARG_CONST_CONTEXT has much lower overhead 
-                       // than IARG_CONTEX for passing the CONTEXT* 
+        INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(DoBreakpoint), (KnobUseIargConstContext) ? IARG_CONST_CONTEXT : IARG_CONTEXT,
+                       // IARG_CONST_CONTEXT has much lower overhead
+                       // than IARG_CONTEX for passing the CONTEXT*
                        // to the analysis routine. Note that IARG_CONST_CONTEXT
                        // passes a read-only CONTEXT* to the analysis routine
                        IARG_THREAD_ID, IARG_END);
     }
 }
 
-static void DoBreakpoint(CONTEXT *ctxt, THREADID tid)
+static void DoBreakpoint(CONTEXT* ctxt, THREADID tid)
 {
     if (IsFirstBreakpoint)
     {
@@ -128,7 +111,7 @@ static void DoBreakpoint(CONTEXT *ctxt, THREADID tid)
     }
 }
 
-static void OnExit(INT32, VOID *)
+static void OnExit(INT32, VOID*)
 {
     if (!FoundWhere)
     {

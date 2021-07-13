@@ -1,3 +1,12 @@
+; Copyright 2002-2020 Intel Corporation.
+; 
+; This software is provided to you as Sample Source Code as defined in the accompanying
+; End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+; section 1.L.
+; 
+; This software and the related documents are provided as is, with no express or implied
+; warranties, other than those that are expressly stated in the License.
+
 PUBLIC DoExplicitMemoryOps
 
 
@@ -43,7 +52,7 @@ lbl7:
     mov [esp + 8], eax
 
 lbl8:
-    lea eax, fs:[-8]
+    lea eax, fs:-8  ; -8 is 32-bit segment offset
 
     mov eax, 0deadbeefH
 lbl9:

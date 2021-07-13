@@ -1,3 +1,14 @@
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 
 #if (TARGET_IA32)
 //
@@ -49,8 +60,7 @@ btr:
 bts:    
         movl     4(%esp),%ecx
         movl     8(%esp),%eax
-        // Try the w suffixed version as well.
-        btsw     %ax, (%ecx)
+        bts      %eax, (%ecx)
         mov      $0, %eax
         jnc      1f
         mov      $1, %eax
@@ -115,7 +125,7 @@ btr:
 bts:
         mov     %rsi,%rax
         // Try the w suffixed version as well.
-        btsw    %ax, (%rdi)
+        bts    %rax, (%rdi)
         mov     $0, %rax
         jnc     1f
         mov     $1, %rax

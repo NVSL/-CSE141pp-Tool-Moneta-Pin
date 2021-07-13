@@ -1,22 +1,35 @@
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
+#include <asm_macros.h>
+
 # this routine should generate an error because the target of a local branch
 # is within the probe space.
 #
 .text
-.global do_nothing
-.type do_nothing, function
+.global NAME(do_nothing)
+DECLARE_FUNCTION(do_nothing)
 
-do_nothing:
+NAME(do_nothing):
     mov %rax, 0x0
-lab1:
+LBB1:
     xor %rax, %rax
     test %rax, %rax
-    je lab2
+    je LBB2
 
     xor %rax, %rax
     xor %rax, %rax
-    jmp lab1
+    jmp LBB1
 
-lab2:
+LBB2:
     xor %rax, %rax
     xor %rax, %rax
 
@@ -27,11 +40,11 @@ lab2:
 # is less than the size of the probe, and when relocated, the 
 # push of the original IP will cause a branch into the probe.
 #
-.global call_function
-.type call_function, function
+.global NAME(call_function)
+DECLARE_FUNCTION(call_function)
 
-call_function:
-    call do_nothing
+NAME(call_function):
+    call NAME(do_nothing)
     push %rbx
     pop %rbx
     ret
@@ -40,17 +53,17 @@ call_function:
 
 # Test an unconditional jump in the middle of the probe area.
 #	
-.global good_jump
-.type good_jump, function
+.global NAME(good_jump)
+DECLARE_FUNCTION(good_jump)
 
-good_jump:
+NAME(good_jump):
     xchg %rax, %rax
-    jmp lab3
+    jmp LBB3
 
     push %rbx
     pop %rbx
 
-lab3:
+LBB3:
     xor %rax, %rax
     xor %rax, %rax
 
@@ -60,48 +73,50 @@ lab3:
 # This code can be relocated together with the
 # mov $ip instruction.
 #	
-.global move_ip
-.type move_ip, function
+.global NAME(move_ip)
+DECLARE_FUNCTION(move_ip)
 
 MOVE_IP_START:
-move_ip:
+NAME(move_ip):
     xchg %rax, %rax
-    jmp lab4
+    jmp LBB4
 
     push %rbx
     mov %rbx, 0x1b(%rip)	
     pop %rbx
-lab4:
+LBB4:
     movq $1, %rax
-	test %rax, %rax
-	je lab4
+    test %rax, %rax
+    je LBB4
     xor %rax, %rax
     xor %rax, %rax
 
     ret
 
 MOVE_IP_END:
+#ifndef TARGET_MAC
 .size mov_ip, MOVE_IP_END - MOVE_IP_START
-	
+#endif	
+
 # This code should not be able to be relocated because of the
 # conditional jump as the last instruction.
 #	
-.global fall_thru
-.type fall_thru, function
+.global NAME(fall_thru)
+DECLARE_FUNCTION(fall_thru)
 
-fall_thru:
+NAME(fall_thru):
     xchg %rax, %rax
-    jmp lab5
+    jmp LBB5
 
     push %rbx
     pop %rbx
 
-lab5:
+LBB5:
     xor %rax, %rax
     xor %rax, %rax
     mov %rax, 0x5
     cmp %rax, 0	
-    jz lab5 
+    jz LBB5 
     nop
     nop
     nop
@@ -112,18 +127,18 @@ lab5:
 # This code should not be able to be relocated because of the
 # jump outside of the function.
 #	
-.global bad_jump
-.type bad_jump, function
+.global NAME(bad_jump)
+DECLARE_FUNCTION(bad_jump)
 
-bad_jump:
+NAME(bad_jump):
     xchg %rax, %rax
-    jmp lab6
+    jmp LBB6
 
     push %rbx
     pop %rbx
 
-lab6:
-    jmp do_nothing	
+LBB6:
+    jmp NAME(do_nothing)
     xor %rax, %rax
     xor %rax, %rax
     ret
@@ -133,18 +148,18 @@ lab6:
 # This code should not be able to be relocated because of the
 # call function.
 #	
-.global bad_call
-.type bad_call, function
+.global NAME(bad_call)
+DECLARE_FUNCTION(bad_call)
 
-bad_call:
+NAME(bad_call):
     xchg %rax, %rax
-    jmp lab7
+    jmp LBB7
 
     push %rbx
     pop %rbx
 
-lab7:
-    call do_nothing	
+LBB7:
+    call NAME(do_nothing)
     xor %rax, %rax
     xor %rax, %rax
     ret
@@ -155,12 +170,12 @@ lab7:
 # This code should not be able to be relocated because of the
 # target after the last instruction.
 #	
-.global high_target
-.type high_target, function
+.global NAME(high_target)
+DECLARE_FUNCTION(high_target)
 
-high_target:
+NAME(high_target):
     xchg %rax, %rax
-    jmp lab8
+    jmp LBB8
 
     push %rbx
     pop %rbx
@@ -171,7 +186,7 @@ high_target:
     cmp %rax, 0	
     ret
 	
-lab8:	
+LBB8:	
     nop
     nop
     nop

@@ -1,64 +1,50 @@
+/*
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "utils.h"
+#if defined(PIN_CRT) && defined(TARGET_LINUX)
+#include "pincrt_file_utils.h"
+#endif
 
+#define PATH_MAX_SIZE 4096
 
-char* append3(const char* s1, const char* s2, const char* s3)
+/*
+ * Only on linux the launcher_u linked with PinCRT which implements strnlen_s.
+ * Instead on macOS* uses the system library function strnlen.
+ */
+size_t get_strlen(const char* str)
 {
-    int n = 1;
-    char* p = 0;
-    if (s1)
-        n += strlen(s1);
-    if (s2)
-        n += strlen(s2);
-    if (s3)
-        n += strlen(s3);
-    p = (char*) malloc(sizeof(char) * n);
-    if (s1)
-        strcpy(p, s1);
-    if (s2)
-        strcat(p, s2);
-    if (s3)
-        strcat(p, s3);
-    return p;
+    size_t len;
+#if defined(PIN_CRT) && defined(TARGET_LINUX)
+    len = strnlen_s(str, PATH_MAX_SIZE);
+#else
+    len = strnlen(str, PATH_MAX_SIZE);
+#endif
+    assert(len > 0);
+    return len;
 }
 
-int get_gcc_version_string(int* major, int* minor)
+char* appendPath(const char* s1, const char* s2, const char* s3)
 {
-    FILE *fp;
-    int vindex = 0;
-    char buffer[1035];
-    char* ts = NULL;
-    int ver[3] = { 0 };
-
-    if (!check_file_exists("/usr/bin/gcc"))
-        return 0;
-
-    /* Open the command for reading. */
-    fp = popen("/usr/bin/gcc --version | egrep -o \"[1-9]{1}\\.[1-9]{1}(\\.[0-9]*)?\" | head -1", "r");
-    if (fp == NULL)
-    {
-        return 0;
-    }
-
-    /* Read the first line only. */
-    if (fgets(buffer, sizeof(buffer) - 1, fp) == NULL)
-    {
-        return 0;
-    }
-    /* Find the first number in the first line */
-    ts = strtok(buffer, ".");
-    while (ts != NULL) {
-        if (ts[0] >= '0' && ts[0] <= '9' && vindex < 3) {
-            ver[vindex++] = atoi(ts);
-        }
-        ts = strtok(NULL, ".");
-    }
-    /* close */
-    pclose(fp);
-
-    *major = ver[0];
-    *minor = ver[1];
-
-    return 1;
+    int n   = 1;
+    char* p = 0;
+    if (s1) n += get_strlen(s1);
+    if (s2) n += get_strlen(s2);
+    if (s3) n += get_strlen(s3);
+    p = (char*)malloc(sizeof(char) * n);
+    if (p == NULL) abort();
+    if (s1) strcpy(p, s1);
+    if (s2) strcat(p, s2);
+    if (s3) strcat(p, s3);
+    return p;
 }
 
 void check_retval(int retval, const char* str)
@@ -78,8 +64,7 @@ void check_retval(int retval, const char* str)
 unsigned int check_file_exists(const char* fn)
 {
     unsigned int okay = 1;
-    if (access(fn, R_OK ) == -1)
-        okay = 0;
+    if (access(fn, R_OK) == -1) okay = 0;
     return okay;
 }
 
@@ -92,7 +77,7 @@ void check_file(const char* fn)
     unsigned int okay = check_file_exists(fn);
     if (!okay)
     {
-        fprintf(stderr, "Error. File doesn't exist (%s)\n\n",fn );
+        fprintf(stderr, "Error. File doesn't exist (%s)\n\n", fn);
         exit(1);
     }
 }
@@ -104,11 +89,14 @@ void check_file(const char* fn)
  */
 unsigned int check_not_directory(const char* fn)
 {
+#if defined(PIN_CRT) && defined(TARGET_LINUX)
+    return is_directory_file(fn);
+#else
     unsigned int okay = 1;
     struct stat st;
-    if (stat(fn, &st) == -1 || !S_ISREG(st.st_mode))
-        okay = 0;
+    if (stat(fn, &st) == -1 || !S_ISREG(st.st_mode)) okay = 0;
     return okay;
+#endif
 }
 
 /*!
@@ -118,9 +106,9 @@ unsigned int check_not_directory(const char* fn)
  * @param buff A buffer to create the complete path
  * @return 1 if file exist and not a directory
  */
-unsigned int check_file_in_dir(const char* fn, const char *dir, char *buff)
+unsigned int check_file_in_dir(const char* fn, const char* dir, char* buff)
 {
-    buff = append3(dir, "/", fn);
+    buff = appendPath(dir, "/", fn);
     return check_file_exists(buff) && check_not_directory(buff);
 }
 
@@ -130,15 +118,28 @@ unsigned int check_file_in_dir(const char* fn, const char *dir, char *buff)
  * @param exename The executable path
  * @return The directory it was found in, or null if not found.
  */
-char *search_in_path(const char *exename)
+char* search_in_path(const char* exename)
 {
     const char dirsepchar = ':';
+    char* env_path;
+    char* syspath;
+    char* buff;
+    char* dir;
+    char* dirsep;
+    char* path = 0;
 
-    char *syspath = strdup(getenv("PATH"));
-    char *buff = (char*) malloc(strlen(syspath) + strlen(exename) + 2);
-    char *dir = syspath;
-    char *dirsep = strchr(dir, dirsepchar);
-    char *path = 0;
+    env_path = getenv("PATH");
+    assert(env_path != NULL);
+
+    syspath = strdup(env_path);
+    assert(syspath != NULL);
+
+    buff = (char*)malloc(get_strlen(syspath) + get_strlen(exename) + 2);
+    assert(buff != NULL);
+
+    dir    = syspath;
+    dirsep = strchr(dir, dirsepchar);
+
     while (dirsep)
     {
         *dirsep = 0;
@@ -149,7 +150,7 @@ char *search_in_path(const char *exename)
             free(buff);
             return path;
         }
-        dir = dirsep + 1;
+        dir    = dirsep + 1;
         dirsep = strchr(dir, dirsepchar);
     }
     if (check_file_in_dir(exename, dir, buff))
@@ -170,7 +171,7 @@ char* find_base_path(char* filename)
 {
     char* x;
     char* path = strdup(filename);
-    x = strrchr(path, '/');
+    x          = strrchr(path, '/');
     if (x)
     {
         *x = 0;

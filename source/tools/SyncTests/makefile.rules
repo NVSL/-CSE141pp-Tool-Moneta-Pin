@@ -23,12 +23,6 @@ TEST_TOOL_ROOTS :=
 TEST_ROOTS := lock-integrity lock-stress mutex-integrity mutex-stress mutex-trystress writer-integrity writer-stress \
               writer-trystress reader-stress reader-trystress rw-integrity rw-stress rw-trystress semaphore trylocks
 
-# This defines a list of tests that should run in the "short" sanity. Tests in this list must also
-# appear either in the TEST_TOOL_ROOTS or the TEST_ROOTS list.
-# If the entire directory should be tested in sanity, assign TEST_TOOL_ROOTS and TEST_ROOTS to the
-# SANITY_SUBSET variable in the tests section below (see example in makefile.rules.tmpl).
-SANITY_SUBSET :=
-
 # This defines the tools which will be run during the the tests, and were not already defined in
 # TEST_TOOL_ROOTS.
 TOOL_ROOTS := lock-tester
@@ -55,33 +49,42 @@ LIB_ROOTS :=
 
 ###### Place OS-specific definitions here ######
 
-#Android
-ifeq ($(TARGET_OS), android)
-    TEST_ROOTS += rt-locks
-    TOOL_ROOTS += rt-locks-tool
-    APP_ROOTS += rt-locks-app
-endif
-
 # Linux
 ifeq ($(TARGET_OS),linux)
-    TEST_ROOTS += rt-locks
-    TOOL_ROOTS += rt-locks-tool
-    APP_ROOTS += rt-locks-app
-    ifeq ($(PROBE),1)
-        TEST_ROOTS += stress-client-lock
-        TOOL_ROOTS += stress-client-lock-tool
-        APP_ROOTS += stress-client-lock-app
+    TEST_ROOTS += rt-locks stress-client-lock
+    TOOL_ROOTS += rt-locks-tool stress-client-lock-tool
+    APP_ROOTS += rt-locks-app stress-client-lock-app
+endif
+
+###### Handle exceptions here (OS/arch related) ######
+
+# by default LXC does not allow rtprio
+ifeq ($(TARGET_LXC),1) 
+    TEST_ROOTS := $(filter-out rt-locks, $(TEST_ROOTS))
+    APP_ROOTS := $(filter-out rt-locks-app, $(APP_ROOTS))
+    TOOL_ROOTS := $(filter-out rt-locks-tool, $(TOOL_ROOTS))
+endif
+
+RUNNABLE_TESTS := $(TEST_TOOL_ROOTS) $(TEST_ROOTS)
+
+###### Handle exceptions here (bugs related) ######
+
+# See mantis 4622
+ifeq ($(TARGET_OS),linux)
+    ifeq ($(DIST_NAME_FEDORA),1)
+        ifeq ($(DIST_VER_GE_28),1)
+            TEST_ROOTS := $(filter-out rt-locks, $(TEST_ROOTS))
+            APP_ROOTS := $(filter-out rt-locks-app, $(APP_ROOTS))
+            TOOL_ROOTS := $(filter-out rt-locks-tool, $(TOOL_ROOTS))
+        endif
     endif
 endif
 
-###### Handle Exceptions here ######
+###### Define the sanity subset ######
 
-ifeq ($(TARGET_OS),android)
-# rt-locks is disabled on Android. Mantis: 3203. 
-    TEST_ROOTS := $(filter-out rt-locks, $(TEST_ROOTS))
-    TOOL_ROOTS := $(filter-out rt-locks-tool, $(TOOL_ROOTS))
-    APP_ROOTS := $(filter-out rt-locks-app, $(APP_ROOTS))
-endif
+# This defines the list of tests that should run in sanity. It should include all the tests listed in
+# TEST_TOOL_ROOTS and TEST_ROOTS excluding only unstable tests.
+SANITY_SUBSET := $(TEST_TOOL_ROOTS) $(TEST_ROOTS)
 
 
 ##############################################################
@@ -89,10 +92,6 @@ endif
 # Test recipes
 #
 ##############################################################
-
-###### Finalize sanity here ######
-
-SANITY_SUBSET := $(TEST_TOOL_ROOTS) $(TEST_ROOTS)
 
 # This section contains recipes for tests other than the default.
 # See makefile.default.rules for the default test rules.

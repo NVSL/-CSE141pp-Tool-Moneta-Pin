@@ -1,12 +1,18 @@
-/* ===================================================================== */
 /*
-  @ORIGINAL_AUTHOR: S. Bharadwaj Yadavalli
-*/
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software is provided to you as Sample Source Code as defined in the accompanying
+ * End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+ * section 1.L.
+ * 
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
 
-/* ===================================================================== */
 /*! @file
  *  This file contains the assembly source of Pin unit test repcmpsz_tool
  */
+
         .data
 one:
 	.string	"IAMHEREE"
@@ -16,6 +22,10 @@ two:
 
         .text
 .globl _start
+
+#ifdef TARGET_LINUX
+.type _start, @function
+#endif
 
 _start:
 	fnop
@@ -55,12 +65,14 @@ _start:
 	lea	two, %edi
 	scasw
 	mov     %eax,%ecx
-	
+
 # and exit
 
-	movl	$0,%ebx		# first argument: exit code
+	movl	$0,%ebx		# Linux first argument: exit code
 2:  
-	movl	$1,%eax		# system call number (sys_exit)
+	push    %ebx		# macOS* expects args on the stack
+	push    %ebx
+	movl	$0x1,%eax	# system call number (sys_exit)
 	int	$0x80		# call kernel
 	fnop
-        
+

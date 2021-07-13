@@ -1,35 +1,17 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
-
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
-** <ORIGINAL-AUTHOR>: Greg Lueck
+ * Copyright 2002-2020 Intel Corporation.
+ * 
+ * This software and the related documents are Intel copyrighted materials, and your
+ * use of them is governed by the express license under which they were provided to
+ * you ("License"). Unless the License provides otherwise, you may not use, modify,
+ * copy, publish, distribute, disclose or transmit this software or the related
+ * documents without Intel's prior written permission.
+ * 
+ * This software and the related documents are provided as is, with no express or
+ * implied warranties, other than those that are expressly stated in the License.
+ */
+
+/*
 ** <COMPONENT>: asm
 ** <FILE-TYPE>: component public header
 */
@@ -37,7 +19,6 @@ END_LEGAL */
 #ifndef ASM_H
 #define ASM_H
 
-#include "fund/config.h"
 
 /*
  * This header provides a set of C macros for use in assembly language files.  Using
@@ -113,27 +94,50 @@ END_LEGAL */
  *          Intel(R) 64 architecture.  These macros help insulate source code from the differences
  *          between the Unix and Windows calling standards.
  *
+ *      ASM_<type>_SIZE
+ *          Size of type <type> in bytes.
+ *
+ *      ASM_<type>_TYPE
+ *          Keyword to declare instance of type <type>
+ *
+ *      ASM_NAMED_DATA(label, type, value)
+ *          declares a (local) variable with type 'type', name 'label'
+ *          and initial value of 'value'
+ *
+ *      ASM_PIC_INIT(reg)
+ *          Initialization code for function that reference PIC code/data.
+ *          'reg' is assigned as the PIC register to be used for later references
+ *          to PIC data/code
+ *
+ *      ASM_PC_REL_REF(var,reg)
+ *          Reference to a PIC variable using PC relative addressing.
+ *          'var' is the variable to reference while 'reg' is the PIC register.
+ *
  * Toolchains must define the following macros in order to enable the ASM support:
  *
  *      ASM_TC_GAS, ASM_TC_MASM, ASM_TC_NASM
  *          Must define one of these, according to the assembler provided by the toolchain.
  */
 
-#if defined(ASM_TC_GAS) && defined(FUND_HOST_X86)
+#define ASM_BYTE_SIZE       1
+#define ASM_WORD_SIZE       2
+#define ASM_DWORD_SIZE      4
+#define ASM_QWORD_SIZE      8
+
+
+#if defined(ASM_TC_GAS)
 #   include "asm/gas-x86.h"
-#elif defined(ASM_TC_GAS) && defined(FUND_HOST_IA64)
-#   include "asm/gas-ia64.h"
-#elif defined(ASM_TC_MASM) && defined(FUND_HOST_X86)
+#elif defined(ASM_TC_MASM)
 #   include "asm/masm-x86.h"
-#elif defined(ASM_TC_NASM) && defined(FUND_HOST_X86)
+#elif defined(ASM_TC_NASM)
 #   include "asm/nasm-x86.h"
 #else
 #   error "Must define assembler type and architecture"
 #endif
 
-#if defined(FUND_HOST_WINDOWS) && defined(FUND_HOST_INTEL64)
+#if defined(HOST_IA32E) && defined(TARGET_WINDOWS)
 #   include "asm/windows-intel64.h"
-#elif defined(FUND_HOST_UNIX) && (defined(FUND_HOST_INTEL64) || defined(FUND_HOST_MIC))
+#elif (defined(TARGET_ANDROID) || defined(TARGET_MAC) || defined(TARGET_LINUX)) && defined(HOST_IA32E)
 #   include "asm/unix-intel64.h"
 #endif
 

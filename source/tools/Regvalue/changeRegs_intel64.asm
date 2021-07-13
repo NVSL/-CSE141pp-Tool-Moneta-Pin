@@ -1,3 +1,12 @@
+; Copyright 2002-2020 Intel Corporation.
+; 
+; This software is provided to you as Sample Source Code as defined in the accompanying
+; End User License Agreement for the Intel(R) Software Development Products ("Agreement")
+; section 1.L.
+; 
+; This software and the related documents are provided as is, with no express or implied
+; warranties, other than those that are expressly stated in the License.
+
 PUBLIC ChangeRegsWrapper
 PUBLIC ChangeRegs
 PUBLIC SaveRegsToMem
@@ -11,6 +20,12 @@ extern axmmval:xmmword
 IFDEF CONTEXT_USING_AVX
 extern ymmval:ymmword
 extern aymmval:ymmword
+ENDIF
+IFDEF CONTEXT_USING_AVX512F
+extern zmmval:ymmword    ;  We don't care much about the size we just need reference to the variable.
+extern azmmval:ymmword   ;  since there is no support yet for zmmword this is good enough  
+extern opmaskval:qword
+extern aopmaskval:qword
 ENDIF
 extern fpSaveArea:qword
 
@@ -29,14 +44,26 @@ extern fpSaveArea:qword
 ; rdx   - used (implicitly) by xsave
 ; st0   - used (implicitly) for loading a value to the FPU stack
 ; st2   - used for testing the FPU values
-; xmm0  - used for testing the sse values
-; ymm1  - used for testing the avx values
+; xmm0  - used for testing the sse (xmm) values
+; ymm1  - used for testing the avx (ymm) values
+; zmm5  - used for testing the avx512 (zmm) values
+; k3    - used for testing the opmask register values
 ChangeRegsWrapper PROC
     ; Save the necessary GPRs
     push    rax
     push    rbx
     push    rcx
     push    rdx
+
+IFDEF CONTEXT_USING_AVX512F
+    ; Save the necessary mask registers
+    ;kmovw   eax, k3
+	BYTE 0c5h
+	BYTE 0f8h
+	BYTE 093h
+	BYTE 0c3h
+    push    rax
+ENDIF
 
     ; Allign the fpSaveArea
     lea     rcx, fpSaveArea
@@ -72,6 +99,16 @@ ELSE
     fxrstor [rcx]
 ENDIF
 
+IFDEF CONTEXT_USING_AVX512F
+    ; Restore the mask registers
+    pop     rax
+    ;kmovw   k3, eax
+	BYTE 0c5h
+	BYTE 0f8h
+	BYTE 092h
+	BYTE 0d8h
+ENDIF
+
     ; Restore the GPRs
     pop     rdx
     pop     rcx
@@ -94,6 +131,36 @@ ChangeRegs PROC
 IFDEF CONTEXT_USING_AVX
     ; TEST: load the new value to ymm1
     vmovdqu ymm1, ymmword ptr ymmval
+ENDIF
+IFDEF CONTEXT_USING_AVX512F
+    ; TEST: load the new value to zmm5
+	; instead of:
+	;   simple vmovdqu64 zmm5, zmmword ptr zmmval
+	; do:
+	;   lea rax, zmmval
+	;   vmovdqu64 zmm5,[rax]
+	; encode the avx512 instruction in bytes
+	; since we cannot insert relocation as assembler can we need this split of lea followed by move
+	push rax
+	lea rax, zmmval
+	BYTE 062h
+	BYTE 0f1h
+	BYTE 0feh
+	BYTE 048h
+	BYTE 06fh
+	BYTE 028h
+    ; TEST: load the new value to k3
+    ; instead of:
+    ;    kmovw   k3, opmaskval
+	; do:
+	;    lea rax opmaskval
+	;    kmovw k3, [rax] (encoded in bytes)
+	lea rax, opmaskval
+	BYTE 0c5h
+	BYTE 0f8h
+	BYTE 090h
+	BYTE 018h
+	pop rax
 ENDIF
     ret
 ChangeRegs ENDP
@@ -119,6 +186,35 @@ SaveRegsToMem PROC
 IFDEF CONTEXT_USING_AVX
     ; TEST: store the new value of ymm1
     vmovdqu ymmword ptr aymmval, ymm1
+ENDIF
+IFDEF CONTEXT_USING_AVX512F
+    ; TEST: store the new value of zmm5
+    ; instead of simple:
+    ;    vmovdqu64 zmmword ptr azmmval, zmm5
+	; do:
+	;    lea rax, azmmval
+	;    vmovdqu64 [rax], zmm5
+	; encode the avx512 instruction in bytes
+	push rax
+	lea rax, azmmval
+	BYTE 062h
+	BYTE 0f1h
+	BYTE 0feh
+	BYTE 048h
+	BYTE 07fh
+	BYTE 028h
+    ; TEST: store the new value of k3
+    ; instead of:
+    ;    kmovw   k3, opmaskval
+	; do:
+	;    lea rax aopmaskval
+	;    kmovw   [rax], k3 (encoded in bytes)
+	lea rax, aopmaskval 
+	BYTE 0c5h
+	BYTE 0f8h
+	BYTE 091h
+	BYTE 018h
+	pop rax
 ENDIF
     ret
 SaveRegsToMem ENDP
