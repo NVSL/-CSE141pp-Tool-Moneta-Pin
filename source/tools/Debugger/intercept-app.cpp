@@ -1,33 +1,8 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright (C) 2010-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * This application only makes sense when run with the "intercept-tool" Pin tool.  It's
  * part of a test for PIN_InterceptDebuggingEvent().
@@ -42,16 +17,15 @@ extern "C" int Checkpoint();
 extern "C" void Breakpoint1();
 extern "C" int Breakpoint2();
 
-
 int main()
 {
     // Call these functions through volatile pointers to prevent the compiler from
     // in-lining them.  The tool places instrumentation points in them, and we want
     // to make sure the application calls the out-of-line versions.
     //
-    volatile FPTR_INTRET checkpoint = Checkpoint;
+    volatile FPTR_INTRET checkpoint   = Checkpoint;
     volatile FPTR_VOIDRET breakpoint1 = Breakpoint1;
-    volatile FPTR_INTRET breakpoint2 = Breakpoint2;
+    volatile FPTR_INTRET breakpoint2  = Breakpoint2;
 
     // The Pin tool takes a snapshot in the Checkpoint() function and causes the
     // application to restart from this snapshot, however Checkpoint() returns
@@ -102,11 +76,6 @@ int main()
     return 1;
 }
 
-extern "C" int Checkpoint()
-{
-    return 0;
-}
+extern "C" int Checkpoint() { return 0; }
 
-extern "C" void Breakpoint1()
-{
-}
+extern "C" void Breakpoint1() {}

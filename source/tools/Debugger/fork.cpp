@@ -1,4 +1,7 @@
-/*NO LEGAL*/
+/*
+ * Copyright (C) 2008-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -17,7 +20,6 @@ int main()
     DoCommon();
     return 0;
 }
-
 
 int Glob = 0;
 

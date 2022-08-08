@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2010-2012 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 .text
 .global RaiseIntDivideByZeroException
 ## ADDRINT RaiseIntDivideByZeroException(ADDRINT catchAddr , ADDRINT value);

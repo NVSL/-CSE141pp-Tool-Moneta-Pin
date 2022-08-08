@@ -1,3 +1,8 @@
+;
+; Copyright (C) 2010-2021 Intel Corporation.
+; SPDX-License-Identifier: MIT
+;
+
 PUBLIC SupportsAvx2
 
 
@@ -24,15 +29,15 @@ PUBLIC SupportsAvx2
     BYTE 001h
     BYTE 0D0h
     and eax, 6
-    cmp eax, 6        
+    cmp eax, 6
+    jne $lNOT_SUPPORTED
+    mov     eax, 7
+    mov ecx, 0
+    cpuid
+    and ebx, 020h
+    cmp ebx, 020h
     jne $lNOT_SUPPORTED
     popa
-    mov     eax, 7
-    mov ecx, 0          
-    cpuid
-    and ebx, 010h
-    cmp ebx, 010h 
-    jne $lNOT_SUPPORTED 
     mov eax, 1
     jmp $lDONE
 $lNOT_SUPPORTED:

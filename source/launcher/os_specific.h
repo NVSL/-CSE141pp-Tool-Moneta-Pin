@@ -1,8 +1,6 @@
 /*
- * os_specific.h
- *
- *  Created on: May 28, 2012
- *      Author: bkemper
+ * Copyright (C) 2012-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
  */
 
 #ifndef OS_SPECIFIC_H_
@@ -31,6 +29,5 @@ char* find_driver_name(char* argv0);
  * @return A null terminated array with the required parameters to pin.
  */
 char** build_child_argv(char* base_path, int argc, char** argv, int user_argc, char** user_argv);
-
 
 #endif /* OS_SPECIFIC_H_ */

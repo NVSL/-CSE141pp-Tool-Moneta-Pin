@@ -1,5 +1,11 @@
 #!/bin/bash
 
+#
+# Copyright (C) 2009-2015 Intel Corporation.
+# SPDX-License-Identifier: MIT
+#
+
+
 cmd_prefix=""
 if [ ! -z "$3" ]
 then
@@ -22,7 +28,7 @@ fi
 
 # We allow pin val to be somewhat larger then the tool value
 diff_val=$(($pin_val-$tool_val))
-if [ $diff_val -le 10000 ]
+if [ $diff_val -le 13000 ]
 then
     exit 0
 fi

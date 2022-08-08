@@ -1,33 +1,8 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright (C) 2012-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * This test verifies that a tool can successfully allocate more than 4G of memory in one chunk on 64 bit platforms.
  * We only allocate 4608 MB since some of our test machines don't have enough memory for a larger chunk.
@@ -44,7 +19,8 @@ using std::cerr;
 using std::endl;
 
 #if defined(TARGET_WINDOWS)
-namespace WIND {
+namespace WIND
+{
 #include <Windows.h>
 }
 #endif
@@ -63,21 +39,20 @@ static bool EnoughAvailableMemory(size_t size)
     // The ullAvailPageFile field holds the maximum amount of memory the current process can commit.
     return (memStatus.ullAvailPageFile >= size);
 #endif
-    
-// We expect all non-Windows test machines to have enough memory for the allocation.
+
+    // We expect all non-Windows test machines to have enough memory for the allocation.
     return true;
 }
 
-
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
     PIN_Init(argc, argv);
 
     // Allocate a large chunk of memory (needs to be larger than 4 GB).
-    size_t size = 1;    // 1 B
-    size <<= 3;         // 8 B
-    size += 1;          // 9 B
-    size <<= 29;        // 4608 MB
+    size_t size = 1; // 1 B
+    size <<= 3;      // 8 B
+    size += 1;       // 9 B
+    size <<= 29;     // 4608 MB
 
     // Verify that there is enough available memory for this allocation.
     if (!EnoughAvailableMemory(size))
@@ -101,12 +76,12 @@ int main(int argc, char * argv[])
 
     // Make sure we can access all elements of the array. If there was a problem with the allocation,
     // we will get a segmentation fault.
-    size_t blocks = size/sizeof(int);
+    size_t blocks = size / sizeof(int);
     for (size_t i = 0; i < blocks; ++i)
     {
-    	bigPtr[i] = 1;
+        bigPtr[i] = 1;
     }
-    
+
     PIN_StartProgram(); // never returns
 
     return 0;

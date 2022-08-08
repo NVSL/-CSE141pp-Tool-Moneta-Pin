@@ -1,4 +1,7 @@
-
+/*
+ * Copyright (C) 2008-2012 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
 .global SegAccessRtn
 .type SegAccessRtn, @function

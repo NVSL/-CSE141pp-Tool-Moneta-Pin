@@ -1,33 +1,8 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright (C) 2009-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 #define UNICODE
 #define _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_DEPRECATE
@@ -37,44 +12,50 @@ END_LEGAL */
 #include <string>
 #include <iostream>
 #include <fstream>
-using namespace std;
 
-static wchar_t * ServiceNameW         = L"PinLauncherService";
-static wchar_t * ServiceDisplayNameW  = L"Pin Launcher Service";
-static wchar_t * BinaryNameW          = L"w_pin_service_launcher.exe";
+using std::cerr;
+using std::cout;
+using std::endl;
+using std::ofstream;
+using std::string;
+using std::wstring;
+
+static wchar_t* ServiceNameW        = L"PinLauncherService";
+static wchar_t* ServiceDisplayNameW = L"Pin Launcher Service";
+static wchar_t* BinaryNameW         = L"w_pin_service_launcher.exe";
 
 // perform administrative actions, this class is used
 // when the process runs as regular process (not as service)
 class SERVICE_ADMIN
 {
   public:
-    static void Main(int argc, wchar_t * argv[]);
-  
+    static void Main(int argc, wchar_t* argv[]);
+
   private:
     BOOL Create();
     BOOL Delete();
-    BOOL Start(DWORD argc, LPCTSTR * argv);
+    BOOL Start(DWORD argc, LPCTSTR* argv);
     BOOL Stop();
 
-    void  Usage();
+    void Usage();
 };
 
 // functions to be used when the process runs as service
 class SERVICE_MANAGER
 {
   public:
-    static void WINAPI Main(DWORD argc, LPTSTR * argv);
+    static void WINAPI Main(DWORD argc, LPTSTR* argv);
     static void WINAPI ControlHandler(DWORD opcode);
-    static void CreatePinProcessAndWait(DWORD argc, LPCWSTR * argv);
-    static void StopService();  //never returns
+    static void CreatePinProcessAndWait(DWORD argc, LPCWSTR* argv);
+    static void StopService(); //never returns
     static void OpenFile();
 
   private:
     static void LaunchProcess(wstring cmdLine);
 
-    static SERVICE_STATUS          status;
-    static SERVICE_STATUS_HANDLE   statusHandle;
-    static ofstream                outFile;
+    static SERVICE_STATUS status;
+    static SERVICE_STATUS_HANDLE statusHandle;
+    static ofstream outFile;
 };
 
 SERVICE_STATUS SERVICE_MANAGER::status;
@@ -83,16 +64,16 @@ ofstream SERVICE_MANAGER::outFile;
 
 // main function
 
-int wmain(int argc, wchar_t * argv[])
-{ 
-    if((argc >= 2) && ((wcscmp(argv[1], L"-admin") == 0) || (wcscmp(argv[1], L"-help") == 0)))
+int wmain(int argc, wchar_t* argv[])
+{
+    if ((argc >= 2) && ((wcscmp(argv[1], L"-admin") == 0) || (wcscmp(argv[1], L"-help") == 0)))
     {
         SERVICE_ADMIN::Main(argc, argv);
     }
     else
     {
         SERVICE_MANAGER::OpenFile();
-        SERVICE_TABLE_ENTRY dispatchData[]={{ServiceNameW, SERVICE_MANAGER::Main},{NULL, NULL}};
+        SERVICE_TABLE_ENTRY dispatchData[] = {{ServiceNameW, SERVICE_MANAGER::Main}, {NULL, NULL}};
         StartServiceCtrlDispatcher(dispatchData);
     }
     return 0;
@@ -100,22 +81,22 @@ int wmain(int argc, wchar_t * argv[])
 
 //manager impl
 
-void SERVICE_MANAGER::CreatePinProcessAndWait(DWORD argc, LPCWSTR * argv)
+void SERVICE_MANAGER::CreatePinProcessAndWait(DWORD argc, LPCWSTR* argv)
 {
-    STARTUPINFO          si;
-    PROCESS_INFORMATION  pi;
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
 
     memset(&si, 0, sizeof(si));
     si.cb = sizeof(STARTUPINFO);
     memset(&pi, 0, sizeof(pi));
 
     wstring cmdLine = L"";
-    for(DWORD i = 0; i < argc; i++)
+    for (DWORD i = 0; i < argc; i++)
     {
         cmdLine += wstring(L"\"") + argv[i] + L"\"";
-        if(i < argc -1)
+        if (i < argc - 1)
         {
-             cmdLine += L" ";
+            cmdLine += L" ";
         }
     }
 
@@ -124,25 +105,25 @@ void SERVICE_MANAGER::CreatePinProcessAndWait(DWORD argc, LPCWSTR * argv)
         outFile << "Failed to CreateProcess, " << GetLastError() << endl;
     }
 
-    if(WaitForSingleObject( pi.hProcess, 60*1000 ) != WAIT_OBJECT_0)
+    if (WaitForSingleObject(pi.hProcess, 60 * 1000) != WAIT_OBJECT_0)
     {
         outFile << "Pin didn't finish running after 60 sec. " << endl;
     }
-  
+
     return;
 }
 
-void WINAPI SERVICE_MANAGER::Main(DWORD argc, LPTSTR *argv)
+void WINAPI SERVICE_MANAGER::Main(DWORD argc, LPTSTR* argv)
 {
-    status.dwServiceType = SERVICE_WIN32;
-    status.dwCurrentState = SERVICE_START_PENDING;
-    status.dwControlsAccepted = SERVICE_ACCEPT_STOP;
-    status.dwWin32ExitCode = 0;
+    status.dwServiceType             = SERVICE_WIN32;
+    status.dwCurrentState            = SERVICE_START_PENDING;
+    status.dwControlsAccepted        = SERVICE_ACCEPT_STOP;
+    status.dwWin32ExitCode           = 0;
     status.dwServiceSpecificExitCode = 0;
-    status.dwCheckPoint = 0;
-    status.dwWaitHint = 0;
+    status.dwCheckPoint              = 0;
+    status.dwWaitHint                = 0;
 
-    statusHandle = RegisterServiceCtrlHandler(ServiceNameW, SERVICE_MANAGER::ControlHandler); 
+    statusHandle = RegisterServiceCtrlHandler(ServiceNameW, SERVICE_MANAGER::ControlHandler);
     if (statusHandle == (SERVICE_STATUS_HANDLE)NULL)
     {
         outFile << "Failed to RegisterServiceCtrlHandler, " << GetLastError() << endl;
@@ -150,43 +131,43 @@ void WINAPI SERVICE_MANAGER::Main(DWORD argc, LPTSTR *argv)
     }
 
     status.dwCurrentState = SERVICE_RUNNING;
-    status.dwCheckPoint = 0;
-    status.dwWaitHint = 0;
+    status.dwCheckPoint   = 0;
+    status.dwWaitHint     = 0;
 
-    if (!SetServiceStatus (statusHandle, &status))
+    if (!SetServiceStatus(statusHandle, &status))
     {
-       outFile << "Failed to SetServiceStatus, " << GetLastError() << endl;
-       return;
+        outFile << "Failed to SetServiceStatus, " << GetLastError() << endl;
+        return;
     }
 
-    CreatePinProcessAndWait(argc - 1, (LPCWSTR *)&argv[1]);
+    CreatePinProcessAndWait(argc - 1, (LPCWSTR*)&argv[1]);
 
     StopService();
 
     return;
 }
 
-void WINAPI  SERVICE_MANAGER::ControlHandler(DWORD opcode)
+void WINAPI SERVICE_MANAGER::ControlHandler(DWORD opcode)
 {
-    switch(opcode)
+    switch (opcode)
     {
-      case SERVICE_CONTROL_PAUSE: 
-        status.dwCurrentState = SERVICE_PAUSED;
-        break;
-      case SERVICE_CONTROL_CONTINUE:
-        status.dwCurrentState = SERVICE_RUNNING;
-        break;
-      case SERVICE_CONTROL_STOP:
-        status.dwWin32ExitCode = 0;
-        status.dwCurrentState = SERVICE_STOPPED;
-        status.dwCheckPoint = 0;
-        status.dwWaitHint = 0;
-        outFile.flush();
-        outFile.close();
-        SetServiceStatus (statusHandle,&status);
-        break;
-      case SERVICE_CONTROL_INTERROGATE:
-        break; 
+        case SERVICE_CONTROL_PAUSE:
+            status.dwCurrentState = SERVICE_PAUSED;
+            break;
+        case SERVICE_CONTROL_CONTINUE:
+            status.dwCurrentState = SERVICE_RUNNING;
+            break;
+        case SERVICE_CONTROL_STOP:
+            status.dwWin32ExitCode = 0;
+            status.dwCurrentState  = SERVICE_STOPPED;
+            status.dwCheckPoint    = 0;
+            status.dwWaitHint      = 0;
+            outFile.flush();
+            outFile.close();
+            SetServiceStatus(statusHandle, &status);
+            break;
+        case SERVICE_CONTROL_INTERROGATE:
+            break;
     }
     return;
 }
@@ -203,8 +184,8 @@ void SERVICE_MANAGER::StopService()
 
 void SERVICE_MANAGER::LaunchProcess(wstring cmdLine)
 {
-    STARTUPINFO          si;
-    PROCESS_INFORMATION  pi;
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
 
     memset(&si, 0, sizeof(si));
     si.cb = sizeof(STARTUPINFO);
@@ -222,8 +203,8 @@ void SERVICE_MANAGER::OpenFile()
     wchar_t binPathArr[2048];
     GetModuleFileName(NULL, binPathArr, 2048);
 
-    size_t serviceExeNameLen = wcslen(BinaryNameW);
-    size_t servicePathNameLen  = wcslen(binPathArr) - serviceExeNameLen;
+    size_t serviceExeNameLen       = wcslen(BinaryNameW);
+    size_t servicePathNameLen      = wcslen(binPathArr) - serviceExeNameLen;
     binPathArr[servicePathNameLen] = L'\0';
 
     SetCurrentDirectory(binPathArr);
@@ -234,22 +215,20 @@ void SERVICE_MANAGER::OpenFile()
     outFile.open(fileName.c_str());
 }
 
-
 //admin impl
 
-void SERVICE_ADMIN::Main(int argc, wchar_t * argv[])
+void SERVICE_ADMIN::Main(int argc, wchar_t* argv[])
 {
     SERVICE_ADMIN admin;
-  
-    if((argc == 1) || 
-      ((argc == 2) && ((wcscmp(argv[1], L"-admin") == 0) || (wcscmp(argv[1], L"-help") == 0))))
+
+    if ((argc == 1) || ((argc == 2) && ((wcscmp(argv[1], L"-admin") == 0) || (wcscmp(argv[1], L"-help") == 0))))
     {
         return admin.Usage();
     }
 
-    if(wcscmp(argv[2], L"-create") == 0)
+    if (wcscmp(argv[2], L"-create") == 0)
     {
-        if(admin.Create())
+        if (admin.Create())
         {
             cerr << "Created service sucessfully!" << endl;
         }
@@ -260,7 +239,7 @@ void SERVICE_ADMIN::Main(int argc, wchar_t * argv[])
     }
     else if (wcscmp(argv[2], L"-start") == 0)
     {
-        if(admin.Start((DWORD)(argc - 3), (LPCWSTR *)&argv[3]))
+        if (admin.Start((DWORD)(argc - 3), (LPCWSTR*)&argv[3]))
         {
             cerr << "Started service sucessfully!" << endl;
         }
@@ -269,9 +248,9 @@ void SERVICE_ADMIN::Main(int argc, wchar_t * argv[])
             cerr << "Failed to start service" << endl;
         }
     }
-    else if (wcscmp(argv[2],L"-stop") == 0)
+    else if (wcscmp(argv[2], L"-stop") == 0)
     {
-        if(admin.Stop())
+        if (admin.Stop())
         {
             cerr << "Stopped service sucessfully!" << endl;
         }
@@ -280,9 +259,9 @@ void SERVICE_ADMIN::Main(int argc, wchar_t * argv[])
             cerr << "Failed to stop service" << endl;
         }
     }
-    else if (wcscmp(argv[2],L"-delete") == 0)
+    else if (wcscmp(argv[2], L"-delete") == 0)
     {
-        if(admin.Delete())
+        if (admin.Delete())
         {
             cerr << "Deleted service sucessfully!" << endl;
         }
@@ -308,11 +287,11 @@ BOOL SERVICE_ADMIN::Create()
         cerr << "Failed to OpenSCManager, " << GetLastError() << endl;
         return false;
     }
-  
+
     wchar_t binPathArr[2048];
     GetModuleFileName(NULL, binPathArr, 2048);
     wstring path = binPathArr;
-    path = L"\"" + path + L"\"";
+    path         = L"\"" + path + L"\"";
 
 #if 0 // This code is intended for symbolic link substitution
     size_t slashLocation = path.find(L"\\");
@@ -337,24 +316,15 @@ BOOL SERVICE_ADMIN::Create()
     LPCTSTR binPath = path.c_str();
 
     SC_HANDLE service;
-    service = CreateService(manager, 
-                            ServiceNameW, 
-                            ServiceDisplayNameW,
-                            SERVICE_ALL_ACCESS,
-                            SERVICE_WIN32_OWN_PROCESS,
-                            SERVICE_DEMAND_START, 
-                            SERVICE_ERROR_NORMAL, 
-                            binPath,
-                            NULL,
-                            NULL, 
-                            NULL,
+    service = CreateService(manager, ServiceNameW, ServiceDisplayNameW, SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS,
+                            SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL, binPath, NULL, NULL, NULL,
                             NULL,  // log on as Local System
                             NULL); // no password
     if (service == NULL && (GetLastError() != ERROR_SERVICE_EXISTS))
     {
         cerr << "Failed to CreateService, " << GetLastError() << endl;
         CloseServiceHandle(manager);
-        return false; 
+        return false;
     }
 
     CloseServiceHandle(manager);
@@ -362,7 +332,7 @@ BOOL SERVICE_ADMIN::Create()
     return true;
 }
 
-BOOL SERVICE_ADMIN::Start(DWORD argc, LPCWSTR * argv)
+BOOL SERVICE_ADMIN::Start(DWORD argc, LPCWSTR* argv)
 {
     SC_HANDLE manager;
     manager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
@@ -378,30 +348,30 @@ BOOL SERVICE_ADMIN::Start(DWORD argc, LPCWSTR * argv)
     {
         cerr << "Failed to OpenService, " << GetLastError() << endl;
         CloseServiceHandle(manager);
-        return false; 
+        return false;
     }
 
-    if(!StartService(service, argc, argv))
+    if (!StartService(service, argc, argv))
     {
         cerr << "Failed to StartService, " << GetLastError() << endl;
         CloseServiceHandle(manager);
         CloseServiceHandle(service);
-        return false; 
+        return false;
     }
 
     Sleep(12000);
 
     //maximum 8k
-    SERVICE_STATUS_PROCESS * pServiceStatusProcess = (SERVICE_STATUS_PROCESS *)malloc(0x2000);
-    pServiceStatusProcess->dwCurrentState = SERVICE_START_PENDING;
+    SERVICE_STATUS_PROCESS* pServiceStatusProcess = (SERVICE_STATUS_PROCESS*)malloc(0x2000);
+    pServiceStatusProcess->dwCurrentState         = SERVICE_START_PENDING;
 
     //let pin to do it's job, it has 60 seconds to complete
     int timer = 12;
-    while((timer != 0) && (pServiceStatusProcess->dwCurrentState != SERVICE_STOPPED))
+    while ((timer != 0) && (pServiceStatusProcess->dwCurrentState != SERVICE_STOPPED))
     {
         timer--;
         DWORD bytesNeeded = 0;
-        if(!QueryServiceStatusEx(service, SC_STATUS_PROCESS_INFO, (LPBYTE)pServiceStatusProcess, 0x2000, &bytesNeeded))
+        if (!QueryServiceStatusEx(service, SC_STATUS_PROCESS_INFO, (LPBYTE)pServiceStatusProcess, 0x2000, &bytesNeeded))
         {
             cout << "Failed to QueryServiceStatusEx, " << GetLastError() << endl;
             CloseServiceHandle(manager);
@@ -412,7 +382,7 @@ BOOL SERVICE_ADMIN::Start(DWORD argc, LPCWSTR * argv)
         Sleep(5000);
     }
 
-    if(pServiceStatusProcess->dwCurrentState != SERVICE_STOPPED)
+    if (pServiceStatusProcess->dwCurrentState != SERVICE_STOPPED)
     {
         cerr << "Service haven't stopped after 60 seconds" << endl;
         CloseServiceHandle(manager);
@@ -427,7 +397,6 @@ BOOL SERVICE_ADMIN::Start(DWORD argc, LPCWSTR * argv)
 
     return true;
 }
-
 
 BOOL SERVICE_ADMIN::Stop()
 {
@@ -445,17 +414,17 @@ BOOL SERVICE_ADMIN::Stop()
     {
         cout << "Failed to OpenService, " << GetLastError() << endl;
         CloseServiceHandle(manager);
-        return false; 
+        return false;
     }
 
     SERVICE_STATUS status;
-    BOOL res  = ControlService(service, SERVICE_CONTROL_STOP, &status);
-    if(!res && (GetLastError() != ERROR_SERVICE_NOT_ACTIVE))
+    BOOL res = ControlService(service, SERVICE_CONTROL_STOP, &status);
+    if (!res && (GetLastError() != ERROR_SERVICE_NOT_ACTIVE))
     {
         cout << "Failed to ControlService, " << GetLastError() << endl;
         CloseServiceHandle(manager);
         CloseServiceHandle(service);
-        return false; 
+        return false;
     }
 
     CloseServiceHandle(manager);
@@ -479,15 +448,15 @@ BOOL SERVICE_ADMIN::Delete()
     {
         cout << "Failed to OpenService, " << GetLastError() << endl;
         CloseServiceHandle(manager);
-        return false; 
+        return false;
     }
 
-    if(!DeleteService(service))
+    if (!DeleteService(service))
     {
         cout << "Failed to DeleteService, " << GetLastError() << endl;
         CloseServiceHandle(manager);
         CloseServiceHandle(service);
-        return false; 
+        return false;
     }
 
     CloseServiceHandle(manager);
@@ -497,7 +466,7 @@ BOOL SERVICE_ADMIN::Delete()
 
 void SERVICE_ADMIN::Usage()
 {
-    cerr << "Usage:" << endl; 
+    cerr << "Usage:" << endl;
     cerr << "To create the service: -admin -create" << endl;
     cerr << "To start the service:  -admin -start <pin> <pin arguments>" << endl;
     cerr << "To start the service:  -admin -stop" << endl;

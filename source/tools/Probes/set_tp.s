@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2007-2007 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
 /*
  * void set_tp( ADDRINT )

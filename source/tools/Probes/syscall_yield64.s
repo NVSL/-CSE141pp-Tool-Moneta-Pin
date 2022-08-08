@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2009-2012 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 # this routine calls a system call in the first bytes of the function
 # within the probe space.
 #

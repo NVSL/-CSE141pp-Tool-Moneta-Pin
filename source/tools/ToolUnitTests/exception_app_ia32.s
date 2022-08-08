@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2010-2010 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 .text
 
 ## unsigned int RaiseIntDivideByZeroException(unsigned int (*)(), unsigned int);

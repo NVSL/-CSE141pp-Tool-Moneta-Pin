@@ -1,13 +1,20 @@
+/*
+ * Copyright (C) 2007-2015 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
+#include <asm_macros.h>
+
 # 
 # contains important code patterns
 # doesn't actually do anything
 
 # make sure the relocated entry will copy more than one basic block.
 .text
-.global do_nothing
-.type do_nothing, function
+.global NAME(do_nothing)
+DECLARE_FUNCTION(do_nothing)
 
-do_nothing:
+NAME(do_nothing):
     test %rax, %rax
     je lab1
 
@@ -22,10 +29,10 @@ lab1:
 
 #make sure the relocated entry will correctly handle a jump as the last
 #instruction in the basic block.
-.global nothing_doing
-.type nothing_doing, function
+.global NAME(nothing_doing)
+DECLARE_FUNCTION(nothing_doing)
 
-nothing_doing:
+NAME(nothing_doing):
     xor %rax, %rax
     test %rax, %rax
     je lab1
@@ -42,13 +49,13 @@ lab2:
 
 # call should be replaced with a push/jmp when relocated.
 #
-.global call_function
-.type call_function, function
+.global NAME(call_function)
+DECLARE_FUNCTION(call_function)
 
-call_function:
+NAME(call_function):
     push %rax
     push %rbx
-    call do_nothing
+    call NAME(do_nothing)
     pop %rbx
     pop %rax
     ret
@@ -56,24 +63,24 @@ call_function:
 
 # make sure this code pattern works
 #
-.global call_nothing
-.type call_nothing, function
+.global NAME(call_nothing)
+DECLARE_FUNCTION(call_nothing)
 
-call_nothing:
+NAME(call_nothing):
     push %rax
     mov %rax, %rax
     push %rbx
-    call do_nothing
+    call NAME(do_nothing)
     pop %rbx
     pop %rax
     ret
 
 #make sure this code pattern works
 #
-.global shorty
-.type shorty, function
+.global NAME(shorty)
+DECLARE_FUNCTION(shorty)
 	
-shorty:	
+NAME(shorty):	
 	xor %rax, %rax
 	jmp lab3
 	nop

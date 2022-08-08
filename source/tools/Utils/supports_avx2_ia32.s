@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2010-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 #ifdef TARGET_MAC
 .global _SupportsAvx2
 _SupportsAvx2:
@@ -24,10 +29,10 @@ SupportsAvx2:
     cmpl $6, %eax      # check OS has enabled both XMM and YMM state support
     jne NotSupported
     mov $7, %eax
-    mov $0, %ecx       
+    mov $0, %ecx       // Check for AVX2 support on CPU
     cpuid
-    andl $0x10, %ebx
-    cmpl $0x10, %ebx
+    andl $0x20, %ebx   // bit 5 avx2
+    cmpl $0x20, %ebx   // bit 5 avx2
     jne NotSupported   # no AVX2
     mov $1, %eax
 done:

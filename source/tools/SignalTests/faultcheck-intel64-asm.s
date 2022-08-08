@@ -1,4 +1,9 @@
 /*
+ * Copyright (C) 2009-2012 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
+/*
  * void DoUnmappedRead(void *addr)
  */
 .text

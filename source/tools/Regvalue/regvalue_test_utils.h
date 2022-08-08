@@ -1,58 +1,31 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright (C) 2013-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 #ifndef REGVALUE_TEST_UTILS_H
 #define REGVALUE_TEST_UTILS_H
-
 
 /////////////////////
 // INCLUDES
 /////////////////////
 
 #include "pin.H"
-#include "../Utils/regvalue_utils.h"
-
+#include "regvalue_utils.h"
+using std::vector;
 
 /////////////////////
 // GLOBAL VARIABLES
 /////////////////////
 
 // A knob for specifying whether x87 fpstate registers should be tested.
-extern KNOB<bool> KnobTestSt;
+extern KNOB< bool > KnobTestSt;
 
 // A knob for specifying whether partial registers should be tested.
-extern KNOB<bool> KnobTestPartial;
+extern KNOB< bool > KnobTestPartial;
 
 // A knob for specifying whether the SIMD registers should be tested.
-extern KNOB<bool> KnobTestSIMD;
-
+extern KNOB< bool > KnobTestSIMD;
 
 /////////////////////
 // FUNCTION DECLARATIONS
@@ -61,7 +34,7 @@ extern KNOB<bool> KnobTestSIMD;
 ///// Register Operations
 
 // Get a vector with all the tested registers.
-const vector<REG>& GetTestRegs();
+const vector< REG >& GetTestRegs();
 
 // Get a REGSET with all the tested registers.
 const REGSET& GetTestRegset();

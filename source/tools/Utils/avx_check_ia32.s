@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2010-2014 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 #ifdef TARGET_MAC
 .global _SupportsAvx
 _SupportsAvx:

@@ -1,9 +1,8 @@
-/* ===================================================================== */
 /*
-  @ORIGINAL_AUTHOR: Jim Cownie
-*/
+ * Copyright (C) 2014-2016 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-/* ===================================================================== */
 /*! @file
  *  A small test which doesn't link in a C runtime.
  *  It provides a  menagerie of different unpleasant push instructions, and

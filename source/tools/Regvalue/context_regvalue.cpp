@@ -1,40 +1,16 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright (C) 2013-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 #include <fstream>
 #include <cstring>
 #include <cassert>
 #include "context_utils.h"
+using std::endl;
+using std::flush;
 
 using std::ofstream;
-
 
 /////////////////////
 // GLOBAL VARIABLES
@@ -44,29 +20,27 @@ using std::ofstream;
 // 1. default   - regular CONTEXT passed to the analysis routine using IARG_CONTEXT.
 // 2. const     - const CONTEXT passed to the analysis routine using IARG_CONST_CONTEXT.
 // 2. partial   - partial CONTEXT passed to the analysis routine using IARG_PARTIAL_CONTEXT.
-KNOB<string> KnobTestContext(KNOB_MODE_WRITEONCE, "pintool",
-    "testcontext", "default", "specify which context to test. One of default|const|partial.");
+KNOB< string > KnobTestContext(KNOB_MODE_WRITEONCE, "pintool", "testcontext", "default",
+                               "specify which context to test. One of default|const|partial.");
 
 // A knob for defining the output file name
-KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
-    "o", "context_regvalue.out", "specify output file name");
+KNOB< string > KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool", "o", "context_regvalue.out", "specify output file name");
 
 // ofstream object for handling the output
 ofstream OutFile;
-
 
 /////////////////////
 // ANALYSIS FUNCTIONS
 /////////////////////
 
-static void PrintsBefore(CONTEXT * ctxt)
+static void PrintsBefore(CONTEXT* ctxt)
 {
     OutFile << "Context values before ChangeRegs functions" << endl << flush;
     StoreContext(ctxt);
     PrintStoredRegisters(OutFile);
 }
 
-static void ChecksAfter(CONTEXT * ctxt)
+static void ChecksAfter(CONTEXT* ctxt)
 {
     OutFile << "Context values after ChangeRegs functions" << endl << flush;
     StoreContext(ctxt);
@@ -78,12 +52,11 @@ static void ChecksAfter(CONTEXT * ctxt)
     }
 }
 
-
 /////////////////////
 // CALLBACKS
 /////////////////////
 
-static VOID ImageLoad(IMG img, VOID * v)
+static VOID ImageLoad(IMG img, VOID* v)
 {
     if (IMG_IsMainExecutable(img))
     {
@@ -102,12 +75,11 @@ static VOID ImageLoad(IMG img, VOID * v)
         }
         else if (KnobTestContext.Value() == "partial")
         {
-            REGSET regsin = GetTestRegset();
+            REGSET regsin  = GetTestRegset();
             REGSET regsout = GetTestRegset();
-            RTN_InsertCall(changeRegsRtn, IPOINT_BEFORE, (AFUNPTR)PrintsBefore, IARG_PARTIAL_CONTEXT,
-                                                                                &regsin, &regsout, IARG_END);
-            RTN_InsertCall(changeRegsRtn, IPOINT_AFTER, (AFUNPTR)ChecksAfter, IARG_PARTIAL_CONTEXT,
-                                                                              &regsin, &regsout, IARG_END);
+            RTN_InsertCall(changeRegsRtn, IPOINT_BEFORE, (AFUNPTR)PrintsBefore, IARG_PARTIAL_CONTEXT, &regsin, &regsout,
+                           IARG_END);
+            RTN_InsertCall(changeRegsRtn, IPOINT_AFTER, (AFUNPTR)ChecksAfter, IARG_PARTIAL_CONTEXT, &regsin, &regsout, IARG_END);
         }
         else
         {
@@ -118,20 +90,16 @@ static VOID ImageLoad(IMG img, VOID * v)
     }
 }
 
-static VOID Fini(INT32 code, VOID *v)
-{
-    OutFile.close();
-}
-
+static VOID Fini(INT32 code, VOID* v) { OutFile.close(); }
 
 /////////////////////
 // MAIN FUNCTION
 /////////////////////
 
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
     // Initialize Pin
-    PIN_InitSymbols();
+    PIN_InitSymbolsAlt(EXPORT_SYMBOLS);
     PIN_Init(argc, argv);
 
     // Open the output file

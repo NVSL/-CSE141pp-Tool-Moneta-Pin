@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2012-2012 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 .global Do32BitOverride
 .type Do32BitOverride, @function
 Do32BitOverride:

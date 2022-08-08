@@ -1,3 +1,7 @@
+;
+; Copyright (C) 2012-2012 Intel Corporation.
+; SPDX-License-Identifier: MIT
+;
 
 PUBLIC maina
 PUBLIC red

@@ -1,10 +1,13 @@
-/*NO LEGAL*/
+/*
+ * Copyright (C) 2008-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     if (argc != 2)
     {

@@ -1,3 +1,8 @@
+#
+# Copyright (C) 2004-2004 Intel Corporation.
+# SPDX-License-Identifier: MIT
+#
+
 allcache - shows all the capabilities of the cache simulator
            
 dcache - shows all the capabilities of the cache simulator

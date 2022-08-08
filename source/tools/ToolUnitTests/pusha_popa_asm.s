@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2007-2015 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 	.text
 .globl DoPushA16
 #ifndef TARGET_MAC

@@ -1,33 +1,8 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright (C) 2009-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
   This tool validates ability to set probe if base relocation is present in probed bytes.
   Such probe is not allowed in relocated image where fixups are not yet resolved.
@@ -47,6 +22,7 @@ namespace WIND
 #include <windows.h>
 }
 
+using std::string;
 
 /*
  * Return preferred image base taken from field OptionalHeader.ImageBase
@@ -62,7 +38,7 @@ ADDRINT GetModulePreferredBase(ADDRINT moduleBase)
     {
         return 0;
     }
-    WIND::PIMAGE_DOS_HEADER pDos = reinterpret_cast<WIND::PIMAGE_DOS_HEADER>(moduleBase);
+    WIND::PIMAGE_DOS_HEADER pDos = reinterpret_cast< WIND::PIMAGE_DOS_HEADER >(moduleBase);
 
     // Returns FALSE when not DOS MZ header
     if (pDos->e_magic != IMAGE_DOS_SIGNATURE)
@@ -70,8 +46,8 @@ ADDRINT GetModulePreferredBase(ADDRINT moduleBase)
         return 0;
     }
 
-    const WIND::PIMAGE_NT_HEADERS pHeaders = reinterpret_cast<WIND::PIMAGE_NT_HEADERS>
-        (reinterpret_cast<WIND::ULONG_PTR>(pDos) + pDos->e_lfanew);
+    const WIND::PIMAGE_NT_HEADERS pHeaders =
+        reinterpret_cast< WIND::PIMAGE_NT_HEADERS >(reinterpret_cast< WIND::ULONG_PTR >(pDos) + pDos->e_lfanew);
 
     // check that this is PE/COFF image
     if (pHeaders->Signature != IMAGE_NT_SIGNATURE)
@@ -82,13 +58,12 @@ ADDRINT GetModulePreferredBase(ADDRINT moduleBase)
     return pHeaders->OptionalHeader.ImageBase;
 }
 
-
 /*
  * Return TRUE if baseName matches tail of imageName. Comparison is case-insensitive.
  * @param[in]  imageName  image file name in either form with extension
  * @param[in]  baseName   image base name with extension (e.g. kernel32.dll)
  */
-static BOOL CmpBaseImageName(const string & imageName, const string & baseName)
+static BOOL CmpBaseImageName(const string& imageName, const string& baseName)
 {
     if (imageName.size() >= baseName.size())
     {
@@ -97,12 +72,11 @@ static BOOL CmpBaseImageName(const string & imageName, const string & baseName)
     return FALSE;
 }
 
-
-static VOID on_module_loading(IMG img, VOID *data)
+static VOID on_module_loading(IMG img, VOID* data)
 {
     // Image rebase detection.
     // Only mismatch between actual and preferred base address is considered as detectable rebase.
-    BOOL rebase_detected = ( IMG_LowAddress(img) != GetModulePreferredBase(IMG_LowAddress(img)) );
+    BOOL rebase_detected = (IMG_LowAddress(img) != GetModulePreferredBase(IMG_LowAddress(img)));
 
     RTN routine = RTN_FindByName(img, "baserel_in_probe");
     if (!RTN_Valid(routine))
@@ -118,7 +92,7 @@ static VOID on_module_loading(IMG img, VOID *data)
     {
         // Fixup is located at offset 3 from function entry point.
         // Value of the fixup is address of the function entry point.
-        ADDRINT * fixup_addr = reinterpret_cast<ADDRINT *>(RTN_Address(routine) + 3);
+        ADDRINT* fixup_addr = reinterpret_cast< ADDRINT* >(RTN_Address(routine) + 3);
 
         if (rebase_detected)
         {
@@ -206,16 +180,15 @@ static VOID on_module_loading(IMG img, VOID *data)
     // The tool is expected to print the message 4 times.
 }
 
-
 int main(int argc, char** argv)
 {
     PIN_InitSymbols();
 
     if (!PIN_Init(argc, argv))
     {
-        IMG_AddInstrumentFunction(on_module_loading,  0);        
+        IMG_AddInstrumentFunction(on_module_loading, 0);
 
-        PIN_StartProbedProgram();
+        PIN_StartProgramProbed();
     }
 
     exit(1);

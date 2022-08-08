@@ -1,4 +1,9 @@
 /*
+ * Copyright (C) 2008-2008 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
+/*
  * This test verifies Pin's handling of two weird instructions:
  * "call *%rsp" and "jmp *%rsp".
  */

@@ -1,3 +1,8 @@
+;
+; Copyright (C) 2009-2012 Intel Corporation.
+; SPDX-License-Identifier: MIT
+;
+
 PUBLIC Analysis_func
 PUBLIC Analysis_func_immed
 PUBLIC Analysis_func_reg_overwrite

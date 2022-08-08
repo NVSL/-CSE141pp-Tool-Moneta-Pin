@@ -1,47 +1,22 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright (C) 2010-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * This tool is meant to run on the application "pc-change-async.cpp".
  */
- 
+
 #include <iostream>
 #include <cstdlib>
 #include "pin.H"
 
 BOOL FoundBreakpointFunction = FALSE;
 BOOL FoundBreakpointLocation = FALSE;
-BOOL FoundOneFunction = FALSE;
-BOOL FoundTwoFunction = FALSE;
-BOOL FoundOneRtn = FALSE;
-BOOL AllowBreakpoint = FALSE;
+BOOL FoundOneFunction        = FALSE;
+BOOL FoundTwoFunction        = FALSE;
+BOOL FoundOneRtn             = FALSE;
+BOOL AllowBreakpoint         = FALSE;
 
 ADDRINT BreakpointFunction;
 ADDRINT BreakpointLocation;
@@ -50,15 +25,13 @@ ADDRINT TwoFunction;
 
 PIN_LOCK Lock;
 
-
-static VOID OnImage(IMG, VOID *);
-static VOID InstrumentRtn(RTN rtn, VOID *);
+static VOID OnImage(IMG, VOID*);
+static VOID InstrumentRtn(RTN rtn, VOID*);
 static VOID AtOne();
-static BOOL Intercept(THREADID, DEBUGGING_EVENT, CONTEXT *, VOID *);
-static VOID OnExit(INT32, VOID *);
+static BOOL Intercept(THREADID, DEBUGGING_EVENT, CONTEXT*, VOID*);
+static VOID OnExit(INT32, VOID*);
 
-
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
     PIN_Init(argc, argv);
     PIN_InitSymbols();
@@ -73,37 +46,36 @@ int main(int argc, char * argv[])
     return 0;
 }
 
-
-static VOID OnImage(IMG img, VOID *)
+static VOID OnImage(IMG img, VOID*)
 {
-    for (SYM sym = IMG_RegsymHead(img);  SYM_Valid(sym);  sym = SYM_Next(sym))
+    for (SYM sym = IMG_RegsymHead(img); SYM_Valid(sym); sym = SYM_Next(sym))
     {
-        if (SYM_Name(sym) == "Breakpoint")
+        if (PIN_UndecorateSymbolName(SYM_Name(sym), UNDECORATION_NAME_ONLY) == "Breakpoint")
         {
             FoundBreakpointFunction = TRUE;
-            BreakpointFunction = SYM_Address(sym);
+            BreakpointFunction      = SYM_Address(sym);
         }
-        if (SYM_Name(sym) == "BreakpointLocation")
+        if (PIN_UndecorateSymbolName(SYM_Name(sym), UNDECORATION_NAME_ONLY) == "BreakpointLocation")
         {
             FoundBreakpointLocation = TRUE;
-            BreakpointLocation = SYM_Address(sym);
+            BreakpointLocation      = SYM_Address(sym);
         }
-        if (SYM_Name(sym) == "One")
+        if (PIN_UndecorateSymbolName(SYM_Name(sym), UNDECORATION_NAME_ONLY) == "One")
         {
             FoundOneFunction = TRUE;
-            OneFunction = SYM_Address(sym);
+            OneFunction      = SYM_Address(sym);
         }
-        if (SYM_Name(sym) == "Two")
+        if (PIN_UndecorateSymbolName(SYM_Name(sym), UNDECORATION_NAME_ONLY) == "Two")
         {
             FoundTwoFunction = TRUE;
-            TwoFunction = SYM_Address(sym);
+            TwoFunction      = SYM_Address(sym);
         }
     }
 }
 
-static VOID InstrumentRtn(RTN rtn, VOID *)
+static VOID InstrumentRtn(RTN rtn, VOID*)
 {
-    if (RTN_Name(rtn) == "One")
+    if (PIN_UndecorateSymbolName(RTN_Name(rtn), UNDECORATION_NAME_ONLY) == "One")
     {
         RTN_Open(rtn);
         RTN_InsertCall(rtn, IPOINT_BEFORE, AFUNPTR(AtOne), IARG_END);
@@ -111,7 +83,6 @@ static VOID InstrumentRtn(RTN rtn, VOID *)
         RTN_Close(rtn);
     }
 }
-
 
 static VOID AtOne()
 {
@@ -129,8 +100,7 @@ static VOID AtOne()
     AllowBreakpoint = TRUE;
 }
 
-
-static BOOL Intercept(THREADID tid, DEBUGGING_EVENT eventType, CONTEXT *ctxt, VOID *)
+static BOOL Intercept(THREADID tid, DEBUGGING_EVENT eventType, CONTEXT* ctxt, VOID*)
 {
     if (eventType == DEBUGGING_EVENT_BREAKPOINT)
     {
@@ -187,8 +157,7 @@ static BOOL Intercept(THREADID tid, DEBUGGING_EVENT eventType, CONTEXT *ctxt, VO
     std::exit(1);
 }
 
-
-static VOID OnExit(INT32, VOID *)
+static VOID OnExit(INT32, VOID*)
 {
     if (!FoundBreakpointFunction)
     {

@@ -1,33 +1,8 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright (C) 2005-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * This test validates an edge case within Pin.  Pin checks for and delivers
  * any pending asynchronous signals at the end of each trace.  However, it
@@ -56,12 +31,10 @@ END_LEGAL */
 #include <stdlib.h>
 #include <sys/time.h>
 
-
 static void HandleSegv(int);
 static void HandleAlarm(int);
 static void CheckMask();
 static void MakeSegv();
-
 
 int main()
 {
@@ -90,9 +63,9 @@ int main()
         return 1;
     }
 
-    itval.it_value.tv_sec = 0;
-    itval.it_value.tv_usec = 100000;
-    itval.it_interval.tv_sec = 0;
+    itval.it_value.tv_sec     = 0;
+    itval.it_value.tv_usec    = 100000;
+    itval.it_interval.tv_sec  = 0;
     itval.it_interval.tv_usec = 0;
     if (setitimer(ITIMER_VIRTUAL, &itval, 0) == -1)
     {
@@ -103,7 +76,6 @@ int main()
     MakeSegv();
     return 0;
 }
-
 
 static void HandleSegv(int sig)
 {
@@ -118,7 +90,6 @@ static void HandleAlarm(int sig)
     CheckMask();
 }
 
-
 static void CheckMask()
 {
     sigset_t mask;
@@ -130,7 +101,7 @@ static void CheckMask()
         exit(1);
     }
 
-    for (sig = 1;  sig < 32;  sig++)
+    for (sig = 1; sig < 32; sig++)
     {
         if (sigismember(&mask, sig))
         {
@@ -144,10 +115,9 @@ static void CheckMask()
     }
 }
 
-
 static void MakeSegv()
 {
-    volatile int * p;
+    volatile int* p;
     int i;
 
     /*
@@ -157,7 +127,7 @@ static void MakeSegv()
      * to Pin during the analysis call.  Pin should keep that signal pending
      * until the end of this basic block.
      */
-    p = &i;
+    p  = &i;
     *p = 1;
     *p = 2;
     *p = 3;
@@ -175,6 +145,6 @@ static void MakeSegv()
      * This store causes a SEGV, thus forcing a synchronous signal to be delivered
      * while an asynchronous signal (the VTALRM) is pending inside of Pin.
      */
-    p = (volatile int *)0x9;
+    p = (volatile int*)0x9;
     i = *p;
 }

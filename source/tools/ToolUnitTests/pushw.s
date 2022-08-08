@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2010-2011 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 .global pushIW_
 .type pushIW_, function
 pushIW_:      

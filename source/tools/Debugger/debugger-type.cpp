@@ -1,33 +1,8 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright (C) 2010-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * Simple test of the PIN_GetDebuggerType() API.
  */
@@ -38,11 +13,11 @@ END_LEGAL */
 
 BOOL IsFirstIns = TRUE;
 
-static void InstrumentIns(INS, VOID *);
+static void InstrumentIns(INS, VOID*);
 
-
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
+    PIN_InitSymbols();
     PIN_Init(argc, argv);
 
     INS_AddInstrumentFunction(InstrumentIns, 0);
@@ -50,18 +25,29 @@ int main(int argc, char * argv[])
     return 0;
 }
 
-static void InstrumentIns(INS ins, VOID *)
+static void InstrumentIns(INS ins, VOID*)
 {
     if (IsFirstIns)
     {
+#if defined(TARGET_MAC)
+        if (PIN_GetDebugStatus() != DEBUG_STATUS_CONNECTED)
+        {
+            // On macOS in launch mode, a debugger connection is established after the application has already started running
+            // in the earliest point it is safe to do so. So, Jitting of the application start before we reach that point.
+            // Therefore we return here until the the debugger connection session has started.
+            return;
+        }
+#endif
         IsFirstIns = FALSE;
 
         // The debugger isn't connected until after PIN_StartProgram().  Therfore, we
         // call the API when instrumenting the first instruction.
         //
-        if (PIN_GetDebuggerType() != DEBUGGER_TYPE_GDB)
-            std::cout << "Got wrong Debugger Type from Pin" << std::endl;
-        else
+        if (PIN_GetDebuggerType() == DEBUGGER_TYPE_GDB)
             std::cout << "Debugger Type is GDB" << std::endl;
+        else if (PIN_GetDebuggerType() == DEBUGGER_TYPE_LLDB)
+            std::cout << "Debugger Type is LLDB" << std::endl;
+        else
+            std::cout << "Got wrong Debugger Type from Pin" << std::endl;
     }
 }

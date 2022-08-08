@@ -1,34 +1,8 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright (C) 2008-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
-// <ORIGINAL-AUTHOR>: Greg Lueck
 // <COMPONENT>: util
 // <FILE-TYPE>: component public header
 
@@ -37,11 +11,11 @@ END_LEGAL */
 
 #include <string>
 #include <cstring>
-#include "fund.hpp"
 
+#include "types.h"
 
-namespace UTIL {
-
+namespace UTIL
+{
 /*!
  * Utility that holds a raw data buffer.  The internal implementation uses reference
  * counting, so the various copy and "slice" operations are fast.
@@ -53,7 +27,7 @@ namespace UTIL {
  */
 class /*<UTILITY>*/ DATA
 {
-public:
+  public:
     /*!
      * This is used when constructing a DATA that is a copy of some sort of input buffer.
      */
@@ -81,12 +55,11 @@ public:
      */
     enum FILL
     {
-        FILL_UNSPECIFIED,   ///< Leave the buffer unspecified.
-        FILL_ZERO           ///< Zero fill the buffer.
+        FILL_UNSPECIFIED, ///< Leave the buffer unspecified.
+        FILL_ZERO         ///< Zero fill the buffer.
     };
 
-
-public:
+  public:
     /*!
      * Construct a new empty buffer.
      */
@@ -98,14 +71,9 @@ public:
      *  @param[in] size     Size (bytes) of the buffer.
      *  @param[in] fill     Tells whether the initial contents are zero-filled or left unspecified.
      */
-    DATA(size_t size, FILL fill = FILL_UNSPECIFIED)
-    :
-        _sbuf(new SHARED_BUF(size)),
-        _start(_sbuf->_buf),
-        _size(size)
+    DATA(size_t size, FILL fill = FILL_UNSPECIFIED) : _sbuf(new SHARED_BUF(size)), _start(_sbuf->_buf), _size(size)
     {
-        if (fill == FILL_ZERO)
-            std::memset(_start, 0, _size);
+        if (fill == FILL_ZERO) std::memset(_start, 0, _size);
     }
 
     /*!
@@ -115,10 +83,7 @@ public:
      *  @param[in] size     Size (bytes) of data in \a buf.
      *  @param[in] copy     Tells whether \a buf is copied eagerly or lazily.
      */
-    DATA(const void *buf, size_t size, COPY copy = COPY_EAGER)
-    {
-        CopyFromBuffer(buf, size, copy);
-    }
+    DATA(const void* buf, size_t size, COPY copy = COPY_EAGER) { CopyFromBuffer(buf, size, copy); }
 
     /*!
      * Construct a new buffer that is a copy of a C string (not including its terminating NUL).
@@ -126,10 +91,7 @@ public:
      *  @param[in] str      NUL-terminated string.
      *  @param[in] copy     Tells whether \a str is copied eagerly or lazily.
      */
-    DATA(const char *str, COPY copy = COPY_EAGER)
-    {
-        CopyFromBuffer(str, std::strlen(str), copy);
-    }
+    DATA(const char* str, COPY copy = COPY_EAGER) { CopyFromBuffer(str, std::strlen(str), copy); }
 
     /*!
      * Construct a new buffer that is a copy of an C++ string.
@@ -137,10 +99,7 @@ public:
      *  @param[in] str      The string.
      *  @param[in] copy     Tells whether \a str is copied eagerly or lazily.
      */
-    DATA(const std::string &str, COPY copy = COPY_EAGER)
-    {
-        CopyFromBuffer(str.c_str(), str.size(), copy);
-    }
+    DATA(const std::string& str, COPY copy = COPY_EAGER) { CopyFromBuffer(str.c_str(), str.size(), copy); }
 
     /*!
      * Construct a new buffer that is a copy of a subrange of an existing buffer.
@@ -149,10 +108,7 @@ public:
      *  @param[in] off      The new buffer starts at \a off bytes from the start of \a other.
      *                       If \a off is larger than \a other, the new buffer is empty.
      */
-    DATA(const DATA &other, size_t off=0)
-    {
-        CopyFromData(other, off);
-    }
+    DATA(const DATA& other, size_t off = 0) { CopyFromData(other, off); }
 
     /*!
      * Construct a new buffer that is a copy of a subrange of an existing buffer.
@@ -164,12 +120,9 @@ public:
      *                       is greater than the length of \a other, the new buffer is a copy
      *                       of the data up to the end of \a other.
      */
-    DATA(const DATA &other, size_t off, size_t len)
-    {
-        CopyFromDataWithLen(other, off, len);
-    }
+    DATA(const DATA& other, size_t off, size_t len) { CopyFromDataWithLen(other, off, len); }
 
-    ~DATA() {DetachBuf();}
+    ~DATA() { DetachBuf(); }
 
     /*!
      * Reconstruct the buffer to be a copy of another buffer.
@@ -178,7 +131,7 @@ public:
      *
      * @return  Reference to the new data buffer.
      */
-    DATA &operator =(const DATA &other)
+    DATA& operator=(const DATA& other)
     {
         Assign(other);
         return *this;
@@ -193,11 +146,10 @@ public:
     void Assign(size_t size, FILL fill = FILL_UNSPECIFIED)
     {
         DetachBuf();
-        _sbuf = new SHARED_BUF(size);
+        _sbuf  = new SHARED_BUF(size);
         _start = _sbuf->_buf;
-        _size = size;
-        if (fill == FILL_ZERO)
-            std::memset(_start, 0, _size);
+        _size  = size;
+        if (fill == FILL_ZERO) std::memset(_start, 0, _size);
     }
 
     /*!
@@ -207,7 +159,7 @@ public:
      *  @param[in] size     Size (bytes) of data in \a buf.
      *  @param[in] copy     Tells whether \a buf is copied eagerly or lazily.
      */
-    void Assign(const void *buf, size_t size, COPY copy = COPY_EAGER)
+    void Assign(const void* buf, size_t size, COPY copy = COPY_EAGER)
     {
         DetachBuf();
         CopyFromBuffer(buf, size, copy);
@@ -219,7 +171,7 @@ public:
      *  @param[in] str      NUL-terminated string.
      *  @param[in] copy     Tells whether \a str is copied eagerly or lazily.
      */
-    void Assign(const char *str, COPY copy = COPY_EAGER)
+    void Assign(const char* str, COPY copy = COPY_EAGER)
     {
         DetachBuf();
         CopyFromBuffer(str, std::strlen(str), copy);
@@ -231,7 +183,7 @@ public:
      *  @param[in] str      The string.
      *  @param[in] copy     Tells whether \a str is copied eagerly or lazily.
      */
-    void Assign(const std::string &str, COPY copy = COPY_EAGER)
+    void Assign(const std::string& str, COPY copy = COPY_EAGER)
     {
         DetachBuf();
         CopyFromBuffer(str.c_str(), str.size(), copy);
@@ -244,7 +196,7 @@ public:
      *  @param[in] off      This buffer starts at \a off bytes from the start of \a other.
      *                       If \a off is larger than \a other, the new buffer is empty.
      */
-    void Assign(const DATA &other, size_t off=0)
+    void Assign(const DATA& other, size_t off = 0)
     {
         if (this != &other)
         {
@@ -267,7 +219,7 @@ public:
      *                       is greater than the length of \a other, the new buffer is a copy
      *                       of the data up to the end of \a other.
      */
-    void Assign(const DATA &other, size_t off, size_t len)
+    void Assign(const DATA& other, size_t off, size_t len)
     {
         if (this != &other)
         {
@@ -277,8 +229,7 @@ public:
         else
         {
             PopFront(off);
-            if (len < _size)
-                _size = len;
+            if (len < _size) _size = len;
         }
     }
 
@@ -288,9 +239,9 @@ public:
     void Clear()
     {
         DetachBuf();
-        _sbuf = 0;
+        _sbuf  = 0;
         _start = 0;
-        _size = 0;
+        _size  = 0;
     }
 
     /*!
@@ -304,12 +255,12 @@ public:
         if (num >= _size)
         {
             DetachBuf();
-            _sbuf = 0;
+            _sbuf  = 0;
             _start = 0;
-            _size = 0;
+            _size  = 0;
             return;
         }
-        _start = static_cast<FUND::UINT8 *>(_start) + num;
+        _start = static_cast< UINT8* >(_start) + num;
         _size -= num;
     }
 
@@ -324,9 +275,9 @@ public:
         if (num >= _size)
         {
             DetachBuf();
-            _sbuf = 0;
+            _sbuf  = 0;
             _start = 0;
-            _size = 0;
+            _size  = 0;
             return;
         }
         _size -= num;
@@ -349,9 +300,9 @@ public:
             if (!newSize)
             {
                 DetachBuf();
-                _sbuf = 0;
+                _sbuf  = 0;
                 _start = 0;
-                _size = 0;
+                _size  = 0;
                 return;
             }
             _size = newSize;
@@ -363,14 +314,13 @@ public:
             // with any other DATA because doing so would invalidate any GetBuf() pointers
             // in the other DATA.  Therefore, any other DATA's continue to use the old buffer.
             //
-            SHARED_BUF *sbuf = new SHARED_BUF(newSize);
+            SHARED_BUF* sbuf = new SHARED_BUF(newSize);
             std::memcpy(sbuf->_buf, _start, _size);
-            if (fill == FILL_ZERO)
-                std::memset(static_cast<FUND::UINT8 *>(sbuf->_buf) + _size, 0, newSize - _size);
+            if (fill == FILL_ZERO) std::memset(static_cast< UINT8* >(sbuf->_buf) + _size, 0, newSize - _size);
             DetachBuf();
-            _sbuf = sbuf;
+            _sbuf  = sbuf;
             _start = sbuf->_buf;
-            _size = newSize;
+            _size  = newSize;
         }
     }
 
@@ -383,8 +333,7 @@ public:
     {
         // If no other DATA's share our buffer, there's nothing to do.
         //
-        if (!_sbuf || _sbuf->_refCount == 1 || _sbuf->_refCount == EXCLUSIVE)
-            return;
+        if (!_sbuf || _sbuf->_refCount == 1 || _sbuf->_refCount == EXCLUSIVE) return;
 
         // Since we need to copy the buffer anyways, this also copies any "lazy" buffer.
         //
@@ -397,16 +346,13 @@ public:
     /*!
      * @return  Size (bytes) of the buffer.
      */
-    size_t GetSize() const {return _size;}
+    size_t GetSize() const { return _size; }
 
     /*!
      * @return  A pointer to the buffer's data.  The returned pointer remains valid only until
      *           the next operation that modifies the DATA.
      */
-    template<typename T> const T *GetBuf() const
-    {
-        return static_cast<const T *>(_start);
-    }
+    template< typename T > const T* GetBuf() const { return static_cast< const T* >(_start); }
 
     /*!
      * Get a writable pointer to the buffer's data.  This is considered a modifying operation, so
@@ -417,7 +363,7 @@ public:
      *           the next operation that modifies the DATA or until ReleaseWritableBuf() is
      *           called.
      */
-    template<typename T> T *GetWritableBuf()
+    template< typename T > T* GetWritableBuf()
     {
         // Since the caller could use this pointer to change the contents of the buffer,
         // we must make sure that doing so won't change the contents of any other DATA's
@@ -441,12 +387,12 @@ public:
             //
             else if (_sbuf->_isLazy)
             {
-                FUND::UINT8 *buf = new FUND::UINT8[_size];
+                UINT8* buf = new UINT8[_size];
                 std::memcpy(buf, _start, _size);
-                _sbuf->_buf = buf;
-                _sbuf->_size = _size;
+                _sbuf->_buf    = buf;
+                _sbuf->_size   = _size;
                 _sbuf->_isLazy = 0;
-                _start = buf;
+                _start         = buf;
             }
 
             // Mark the buffer as exclusively ours.  This prevents any future DATA from
@@ -455,7 +401,7 @@ public:
             _sbuf->_refCount = EXCLUSIVE;
         }
 
-        return static_cast<T *>(_start);
+        return static_cast< T* >(_start);
     }
 
     /*!
@@ -463,11 +409,10 @@ public:
      */
     void ReleaseWritableBuf()
     {
-        if (_sbuf && _sbuf->_refCount == EXCLUSIVE)
-            _sbuf->_refCount = 1;
+        if (_sbuf && _sbuf->_refCount == EXCLUSIVE) _sbuf->_refCount = 1;
     }
 
-private:
+  private:
     /*!
      * Construct this DATA by copying an external buffer.
      *
@@ -475,7 +420,7 @@ private:
      *  @param[in] size     Size (bytes) of data in \a buf.
      *  @param[in] copy     Tells whether \a buf is copied eagerly or lazily.
      */
-    void CopyFromBuffer(const void *buf, size_t size, COPY copy)
+    void CopyFromBuffer(const void* buf, size_t size, COPY copy)
     {
         if (copy == COPY_EAGER)
         {
@@ -487,7 +432,7 @@ private:
             _sbuf = new SHARED_BUF(buf, size);
         }
         _start = _sbuf->_buf;
-        _size = size;
+        _size  = size;
     }
 
     /*!
@@ -497,15 +442,15 @@ private:
      *  @param[in] off      The new buffer starts at \a off bytes from the start of \a other.
      *                       If \a off is larger than \a other, the new buffer is empty.
      */
-    void CopyFromData(const DATA &other, size_t off)
+    void CopyFromData(const DATA& other, size_t off)
     {
         // Check for a zero-length buffer.
         //
         if (off >= other._size)
         {
-            _sbuf = 0;
+            _sbuf  = 0;
             _start = 0;
-            _size = 0;
+            _size  = 0;
             return;
         }
 
@@ -516,7 +461,7 @@ private:
         {
             _size = other._size - off;
             _sbuf = new SHARED_BUF(_size);
-            std::memcpy(_sbuf->_buf, static_cast<FUND::UINT8 *>(other._start) + off, _size);
+            std::memcpy(_sbuf->_buf, static_cast< UINT8* >(other._start) + off, _size);
             _start = _sbuf->_buf;
             return;
         }
@@ -525,8 +470,8 @@ private:
         //
         _sbuf = other._sbuf;
         _sbuf->_refCount++;
-        _start = static_cast<FUND::UINT8 *>(other._start) + off;
-        _size = other._size - off;
+        _start = static_cast< UINT8* >(other._start) + off;
+        _size  = other._size - off;
     }
 
     /*!
@@ -539,15 +484,15 @@ private:
      *                       is greater than the length of \a other, the new buffer is a copy
      *                       of the data up to the end of \a other.
      */
-    void CopyFromDataWithLen(const DATA &other, size_t off, size_t len)
+    void CopyFromDataWithLen(const DATA& other, size_t off, size_t len)
     {
         // Check for a zero-length buffer.
         //
         if (off >= other._size)
         {
-            _sbuf = 0;
+            _sbuf  = 0;
             _start = 0;
-            _size = 0;
+            _size  = 0;
             return;
         }
 
@@ -562,7 +507,7 @@ private:
         if (other._sbuf->_refCount == EXCLUSIVE)
         {
             _sbuf = new SHARED_BUF(_size);
-            std::memcpy(_sbuf->_buf, static_cast<FUND::UINT8 *>(other._start) + off, _size);
+            std::memcpy(_sbuf->_buf, static_cast< UINT8* >(other._start) + off, _size);
             _start = _sbuf->_buf;
             return;
         }
@@ -571,7 +516,7 @@ private:
         //
         _sbuf = other._sbuf;
         _sbuf->_refCount++;
-        _start = static_cast<FUND::UINT8 *>(other._start) + off;
+        _start = static_cast< UINT8* >(other._start) + off;
     }
 
     /*!
@@ -582,14 +527,13 @@ private:
     {
         if (_sbuf && ((_sbuf->_refCount == EXCLUSIVE) || (--(_sbuf->_refCount) == 0)))
         {
-            if (_sbuf->_isLazy == 0)
-                delete [] static_cast<FUND::UINT8 *>(_sbuf->_buf);
+            if (_sbuf->_isLazy == 0) delete[] static_cast< UINT8* >(_sbuf->_buf);
             delete _sbuf;
         }
     }
 
-private:
-    static const FUND::UINT32 EXCLUSIVE = FUND::UINT32(0x7fffffff);
+  private:
+    static const UINT32 EXCLUSIVE = UINT32(0x7fffffff);
 
     // This is potentially shared by many DATA instances.
     //
@@ -597,27 +541,26 @@ private:
     {
         // Constructor for an allocated buffer.
         //
-        SHARED_BUF(size_t sz) : _refCount(1), _isLazy(0), _size(sz), _buf(new FUND::UINT8[_size]) {}
+        SHARED_BUF(size_t sz) : _refCount(1), _isLazy(0), _size(sz), _buf(new UINT8[_size]) {}
 
         // Constructor for an lazy-copied buffer.
         //
-        SHARED_BUF(const void *buf, size_t sz) : _refCount(1), _isLazy(1), _size(sz), _buf(const_cast<void *>(buf)) {}
+        SHARED_BUF(const void* buf, size_t sz) : _refCount(1), _isLazy(1), _size(sz), _buf(const_cast< void* >(buf)) {}
 
-
-        FUND::UINT32 _refCount:31;  // Number of DATA's pointing to this SHARED_BUF, or EXCLUSIVE.
-        FUND::UINT32 _isLazy:1;     // Tells if '_buf' is lazy-copied or allocated.
-        size_t _size;               // Size of '_buf'.
+        UINT32 _refCount : 31; // Number of DATA's pointing to this SHARED_BUF, or EXCLUSIVE.
+        UINT32 _isLazy : 1;    // Tells if '_buf' is lazy-copied or allocated.
+        size_t _size;          // Size of '_buf'.
 
         // If '_isLazy' is TRUE, this points to a lazy-copied input buffer and must be treated as "const".
         // If '_isLazy' is FALSE, this points to a "new[]" allocated buffer.
         //
-        void *_buf;
+        void* _buf;
     };
 
-    SHARED_BUF *_sbuf;
-    void *_start;       // Start of my instance's data in _buf (treated as "const" if '_isLazy' is TRUE).
-    size_t _size;       // Size of my instance's data
+    SHARED_BUF* _sbuf;
+    void* _start; // Start of my instance's data in _buf (treated as "const" if '_isLazy' is TRUE).
+    size_t _size; // Size of my instance's data
 };
 
-} // namespace
+} // namespace UTIL
 #endif // file guard

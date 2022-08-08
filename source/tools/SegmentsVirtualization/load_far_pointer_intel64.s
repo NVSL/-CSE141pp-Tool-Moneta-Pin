@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2007-2012 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 # struct FarPointer16
 # {
 #     unsigned short _farPtr;

@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2011-2012 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 .text
 .global probed_func_asm
 .type probed_func_asm,  @function

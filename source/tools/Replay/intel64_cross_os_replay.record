@@ -1,7 +1,7 @@
-L '/disk/PinTools/Utils/obj-intel64/cp-pin' 400e78 772 0 1 
+L '/disk/PinTools/Utils/obj-intel64/cp-pin' 400e78 773 0 1 
 	'main' 401120
 END_RTN_LIST
-L '/lib64/ld-linux-x86-64.so.2' 2aaaaaaaba20 14ebd 2aaaaaaab000 0 
+L '/lib64/ld-linux-x86-64.so.2' 2aaaaaaaba20 14ebe 2aaaaaaab000 0 
 	'lookup_doit' 2aaaaaaabb00
 	'process_dl_debug' 2aaaaaaac750
 	'add_name_to_object' 2aaaaaaaff30
@@ -20,7 +20,7 @@ L '/lib64/ld-linux-x86-64.so.2' 2aaaaaaaba20 14ebd 2aaaaaaab000 0
 	'strnlen' 2aaaaaabed00
 	'_wordcopy_bwd_dest_aligned' 2aaaaaac0530
 END_RTN_LIST
-L '/usr/lib64/libstdc++.so.6' 2aaabd6e8600 74806 2aaabd69c000 0 
+L '/usr/lib64/libstdc++.so.6' 2aaabd6e8600 74807 2aaabd69c000 0 
 	'_ZN9__gnu_cxx17__pool_alloc_base16_M_get_free_listEm' 2aaabd6ecc70
 	'_ZN9__gnu_cxx6__poolILb1EE16_M_reserve_blockEmm' 2aaabd6edda0
 	'_ZNKSt7codecvtIwc11__mbstate_tE10do_unshiftERS0_PcS3_RS3_' 2aaabd6ef5b0
@@ -237,7 +237,7 @@ L '/usr/lib64/libstdc++.so.6' 2aaabd6e8600 74806 2aaabd69c000 0
 	'_ZNK10__cxxabiv117__pbase_type_info10__do_catchEPKSt9type_infoPPvj' 2aaabd758260
 	'__cxa_vec_new2' 2aaabd7587d0
 END_RTN_LIST
-L '/lib64/libm.so.6' 2aaabd8c9c40 341fe 2aaabd8c6000 0 
+L '/lib64/libm.so.6' 2aaabd8c9c40 341ff 2aaabd8c6000 0 
 	'frame_dummy' 2aaabd8c9da0
 	'fegetenv' 2aaabd8cc4c0
 	'__ieee754_atan2' 2aaabd8cc960
@@ -283,7 +283,7 @@ L '/lib64/libm.so.6' 2aaabd8c9c40 341fe 2aaabd8c6000 0
 	'__sin32' 2aaabd8fb130
 	'__divxc3' 2aaabd8fd920
 END_RTN_LIST
-L '/lib64/libgcc_s.so.1' 2aaabda2ac50 9136 2aaabda29000 0 
+L '/lib64/libgcc_s.so.1' 2aaabda2ac50 9137 2aaabda29000 0 
 	'__ashrti3' 2aaabda2b110
 	'__addvti3' 2aaabda2b320
 	'__ffsdi2' 2aaabda2b850
@@ -294,7 +294,7 @@ L '/lib64/libgcc_s.so.1' 2aaabda2ac50 9136 2aaabda29000 0
 	'_Unwind_ForcedUnwind' 2aaabda31b00
 	'__register_frame_info_table' 2aaabda33160
 END_RTN_LIST
-L '/lib64/libc.so.6' 2aaabdb54ee8 d73ee 2aaabdb38000 0 
+L '/lib64/libc.so.6' 2aaabdb54ee8 d73ef 2aaabdb38000 0 
 	'_init' 2aaabdb55000
 	'_Unwind_Resume' 2aaabdb55600
 	'__gconv_get_alias_db' 2aaabdb564a0

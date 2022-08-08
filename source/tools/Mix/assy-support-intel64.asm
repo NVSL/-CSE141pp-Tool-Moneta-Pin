@@ -1,3 +1,7 @@
+;
+; Copyright (C) 2008-2012 Intel Corporation.
+; SPDX-License-Identifier: MIT
+;
 
 	.CODE
 	ALIGN 4

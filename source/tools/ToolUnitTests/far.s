@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2008-2011 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 # Add enter and leave as well, just for amusement
 
 farret:

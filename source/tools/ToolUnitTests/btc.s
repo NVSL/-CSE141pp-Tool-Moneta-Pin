@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2010-2018 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
 #if (TARGET_IA32)
 //
@@ -49,8 +53,7 @@ btr:
 bts:    
         movl     4(%esp),%ecx
         movl     8(%esp),%eax
-        // Try the w suffixed version as well.
-        btsw     %ax, (%ecx)
+        bts      %eax, (%ecx)
         mov      $0, %eax
         jnc      1f
         mov      $1, %eax
@@ -115,7 +118,7 @@ btr:
 bts:
         mov     %rsi,%rax
         // Try the w suffixed version as well.
-        btsw    %ax, (%rdi)
+        bts    %rax, (%rdi)
         mov     $0, %rax
         jnc     1f
         mov     $1, %rax

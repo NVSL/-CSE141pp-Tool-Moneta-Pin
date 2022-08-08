@@ -1,5 +1,4 @@
 #!/bin/csh -f
-# @ORIGINAL_AUTHOR: Robert Muth
 #
 
 

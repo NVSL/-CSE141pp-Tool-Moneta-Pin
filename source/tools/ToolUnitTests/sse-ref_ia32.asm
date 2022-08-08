@@ -1,3 +1,8 @@
+;
+; Copyright (C) 2006-2011 Intel Corporation.
+; SPDX-License-Identifier: MIT
+;
+
 .386
 .XMM
 .model flat, c

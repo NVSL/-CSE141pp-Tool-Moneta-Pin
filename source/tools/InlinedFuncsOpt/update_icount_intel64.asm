@@ -1,3 +1,8 @@
+;
+; Copyright (C) 2014-2014 Intel Corporation.
+; SPDX-License-Identifier: MIT
+;
+
 PUBLIC UpdateIcountByAdd
 PUBLIC UpdateIcountByInc
 PUBLIC UpdateIcountByDecInc

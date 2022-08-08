@@ -1,14 +1,21 @@
+/*
+ * Copyright (C) 2010-2017 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 #
 # Test for iret in 32 bit mode.
 #
 
-iretd_func:
+iret_func:
         mov $-1,%eax
         iret
 
-.type iretdTest, @function
-.global iretdTest
-iretdTest:
+#ifndef TARGET_MAC
+.type iretTest, @function
+#endif
+.global iretTest
+iretTest:
         # We have to build the stack frame ourselves
         sub     $12,%esp
         mov     $0, %eax
@@ -17,7 +24,7 @@ iretdTest:
         mov     %eax,4(%esp)
         lea     here,%eax
         mov     %eax,0(%esp)
-        jmp     iretd_func
+        jmp     iret_func
 here:   
         ret
 

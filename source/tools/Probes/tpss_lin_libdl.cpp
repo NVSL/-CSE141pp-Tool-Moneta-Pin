@@ -1,33 +1,8 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright (C) 2012-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * This tool mimics the behavior of TPSS on Linux by adding probes to various libdl functions.
  * However, in this tool these probes are merely empty wrappers that call the original functions.
@@ -39,10 +14,16 @@ END_LEGAL */
 #include <iostream>
 #include <fstream>
 #include <dlfcn.h>
+using std::cerr;
+using std::endl;
+using std::hex;
+using std::ios;
+using std::ofstream;
+using std::string;
 
-typedef char * CHAR_PTR;
+typedef char* CHAR_PTR;
 
-typedef void * VOID_PTR;
+typedef void* VOID_PTR;
 
 ofstream OutFile;
 
@@ -50,8 +31,7 @@ ofstream OutFile;
 /* Commandline Switches                                                  */
 /* ===================================================================== */
 
-KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
-    "o", "tpss_lin_libdl.txt", "specify tool log file name");
+KNOB< string > KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool", "o", "tpss_lin_libdl.txt", "specify tool log file name");
 
 /* ===================================================================== */
 /* Utility functions                                                     */
@@ -75,22 +55,21 @@ string CurrentTime()
     return tmpbuf;
 }
 
-
 /* ===================================================================== */
 /* Function signatures - these functions will be probed                  */
 /* ===================================================================== */
 
-VOID_PTR (*fptrdlopen)(__const CHAR_PTR __file, int  __mode);
+VOID_PTR (*fptrdlopen)(__const CHAR_PTR __file, int __mode);
 
 int (*fptrdlclose)(VOID_PTR __handle);
 
-VOID_PTR (*fptrdlsym)(VOID_PTR __handle , __const CHAR_PTR __name );
+VOID_PTR (*fptrdlsym)(VOID_PTR __handle, __const CHAR_PTR __name);
 
-VOID_PTR (*fptrdlvsym)( VOID_PTR __handle, __const CHAR_PTR __name,__const CHAR_PTR __version);
+VOID_PTR (*fptrdlvsym)(VOID_PTR __handle, __const CHAR_PTR __name, __const CHAR_PTR __version);
 
-int (*fptrdladdr)(__const void *__address , Dl_info * __info);
+int (*fptrdladdr)(__const void* __address, Dl_info* __info);
 
-int (*fptrdladdr1)(__const void * __address , Dl_info * __info, void ** __extra_info, int __flags);
+int (*fptrdladdr1)(__const void* __address, Dl_info* __info, void** __extra_info, int __flags);
 
 CHAR_PTR (*fptrdlerror)(void);
 
@@ -100,65 +79,65 @@ CHAR_PTR (*fptrdlerror)(void);
 
 VOID_PTR mydlopen(__const CHAR_PTR __file, int __mode)
 {
-   OutFile << CurrentTime() << "mydlopen called " << endl;
-   OutFile.flush();
-   VOID_PTR res = fptrdlopen(__file, __mode);
+    OutFile << CurrentTime() << "mydlopen called " << endl;
+    OutFile.flush();
+    VOID_PTR res = fptrdlopen(__file, __mode);
 
-   return res;
+    return res;
 }
 
 int mydlclose(VOID_PTR __handle)
 {
-   OutFile << CurrentTime() << "mydlclose called " << endl;
-   OutFile.flush();
-   int res = fptrdlclose(__handle);
+    OutFile << CurrentTime() << "mydlclose called " << endl;
+    OutFile.flush();
+    int res = fptrdlclose(__handle);
 
-   return res;
+    return res;
 }
 
-VOID_PTR mydlsym(VOID_PTR  __handle, __const CHAR_PTR  __name)
+VOID_PTR mydlsym(VOID_PTR __handle, __const CHAR_PTR __name)
 {
-   OutFile << CurrentTime() << "mydlsym called " << endl;
-   OutFile.flush();
-   VOID_PTR res = fptrdlsym(__handle, __name);
+    OutFile << CurrentTime() << "mydlsym called " << endl;
+    OutFile.flush();
+    VOID_PTR res = fptrdlsym(__handle, __name);
 
-   return res;
+    return res;
 }
 
-VOID_PTR mydlvsym(VOID_PTR  __handle, __const CHAR_PTR  __name, __const CHAR_PTR __version)
+VOID_PTR mydlvsym(VOID_PTR __handle, __const CHAR_PTR __name, __const CHAR_PTR __version)
 {
-   OutFile << CurrentTime() << "mydlvsym called " << endl;
-   OutFile.flush();
-   VOID_PTR res = fptrdlvsym(__handle, __name, __version);
+    OutFile << CurrentTime() << "mydlvsym called " << endl;
+    OutFile.flush();
+    VOID_PTR res = fptrdlvsym(__handle, __name, __version);
 
-   return res;
+    return res;
 }
 
-int mydladdr(__const void * __address, Dl_info * __info)
+int mydladdr(__const void* __address, Dl_info* __info)
 {
-   OutFile << CurrentTime() << "mydladdr called " << endl;
-   OutFile.flush();
-   int res = fptrdladdr(__address, __info);
+    OutFile << CurrentTime() << "mydladdr called " << endl;
+    OutFile.flush();
+    int res = fptrdladdr(__address, __info);
 
-   return res;
+    return res;
 }
 
-int mydladdr1(__const void * __address, Dl_info * __info, void ** __extra_info, int __flags)
+int mydladdr1(__const void* __address, Dl_info* __info, void** __extra_info, int __flags)
 {
-   OutFile << CurrentTime() << "mydladdr1 called " << endl;
-   OutFile.flush();
-   int res = fptrdladdr1(__address, __info, __extra_info, __flags);
+    OutFile << CurrentTime() << "mydladdr1 called " << endl;
+    OutFile.flush();
+    int res = fptrdladdr1(__address, __info, __extra_info, __flags);
 
-   return res;
+    return res;
 }
 
 CHAR_PTR mydlerror(void)
 {
-   OutFile << CurrentTime() << "CHAR_PTR called " << endl;
-   OutFile.flush();
-   CHAR_PTR res = fptrdlerror();
+    OutFile << CurrentTime() << "CHAR_PTR called " << endl;
+    OutFile.flush();
+    CHAR_PTR res = fptrdlerror();
 
-   return res;
+    return res;
 }
 
 /* ===================================================================== */
@@ -166,13 +145,12 @@ CHAR_PTR mydlerror(void)
 /* ===================================================================== */
 
 // Image load callback - inserts the probes.
-void ImgLoad(IMG img, void *v)
+void ImgLoad(IMG img, void* v)
 {
     // Called every time a new image is loaded
 
-    if ( (IMG_Name(img).find("libdl.so") != string::npos) ||
-         (IMG_Name(img).find("LIBDL.SO") != string::npos) ||
-         (IMG_Name(img).find("LIBDL.so") != string::npos) )
+    if ((IMG_Name(img).find("libdl.so") != string::npos) || (IMG_Name(img).find("LIBDL.SO") != string::npos) ||
+        (IMG_Name(img).find("LIBDL.so") != string::npos))
     {
         RTN rtndlclose = RTN_FindByName(img, "dlclose");
         if (RTN_Valid(rtndlclose) && RTN_IsSafeForProbedReplacement(rtndlclose))
@@ -180,7 +158,7 @@ void ImgLoad(IMG img, void *v)
             OutFile << CurrentTime() << "Inserting probe for dlclose at " << RTN_Address(rtndlclose) << endl;
             OutFile.flush();
             AFUNPTR fptr = (RTN_ReplaceProbed(rtndlclose, AFUNPTR(mydlclose)));
-            fptrdlclose = (int (*)(VOID_PTR ))fptr;
+            fptrdlclose  = (int (*)(VOID_PTR))fptr;
         }
 
         RTN rtndlopen = RTN_FindByName(img, "dlopen");
@@ -189,7 +167,7 @@ void ImgLoad(IMG img, void *v)
             OutFile << CurrentTime() << "Inserting probe for dlopen at " << RTN_Address(rtndlopen) << endl;
             OutFile.flush();
             AFUNPTR fptr = (RTN_ReplaceProbed(rtndlopen, AFUNPTR(mydlopen)));
-            fptrdlopen = (VOID_PTR (*)(__const CHAR_PTR , int ))fptr;
+            fptrdlopen   = (VOID_PTR(*)(__const CHAR_PTR, int))fptr;
         }
 
         RTN rtndlsym = RTN_FindByName(img, "dlsym");
@@ -198,7 +176,7 @@ void ImgLoad(IMG img, void *v)
             OutFile << CurrentTime() << "Inserting probe for dlsym at " << RTN_Address(rtndlsym) << endl;
             OutFile.flush();
             AFUNPTR fptr = (RTN_ReplaceProbed(rtndlsym, AFUNPTR(mydlsym)));
-            fptrdlsym = (VOID_PTR (*)(VOID_PTR, __const CHAR_PTR ))fptr;
+            fptrdlsym    = (VOID_PTR(*)(VOID_PTR, __const CHAR_PTR))fptr;
         }
 
         RTN rtndlvsym = RTN_FindByName(img, "dlvsym");
@@ -207,7 +185,7 @@ void ImgLoad(IMG img, void *v)
             OutFile << CurrentTime() << "Inserting probe for dlvsym at " << RTN_Address(rtndlvsym) << endl;
             OutFile.flush();
             AFUNPTR fptr = (RTN_ReplaceProbed(rtndlvsym, AFUNPTR(mydlvsym)));
-            fptrdlvsym = (VOID_PTR (*)(VOID_PTR, __const CHAR_PTR, __const CHAR_PTR))fptr;
+            fptrdlvsym   = (VOID_PTR(*)(VOID_PTR, __const CHAR_PTR, __const CHAR_PTR))fptr;
         }
 
         RTN rtndladdr = RTN_FindByName(img, "dladdr");
@@ -216,7 +194,7 @@ void ImgLoad(IMG img, void *v)
             OutFile << CurrentTime() << "Inserting probe for dladdr at " << RTN_Address(rtndladdr) << endl;
             OutFile.flush();
             AFUNPTR fptr = (RTN_ReplaceProbed(rtndladdr, AFUNPTR(mydladdr)));
-            fptrdladdr = (int (*)(__const void * , Dl_info * ))fptr;
+            fptrdladdr   = (int (*)(__const void*, Dl_info*))fptr;
         }
 
         RTN rtndladdr1 = RTN_FindByName(img, "dladdr1");
@@ -225,7 +203,7 @@ void ImgLoad(IMG img, void *v)
             OutFile << CurrentTime() << "Inserting probe for dladdr1 at " << RTN_Address(rtndladdr1) << endl;
             OutFile.flush();
             AFUNPTR fptr = (RTN_ReplaceProbed(rtndladdr, AFUNPTR(mydladdr1)));
-            fptrdladdr1 = (int (*)(__const void * , Dl_info *, void **, int ))fptr;
+            fptrdladdr1  = (int (*)(__const void*, Dl_info*, void**, int))fptr;
         }
 
         RTN rtndlerror = RTN_FindByName(img, "dlerror");
@@ -234,7 +212,7 @@ void ImgLoad(IMG img, void *v)
             OutFile << CurrentTime() << "Inserting probe for dlerror at " << RTN_Address(rtndlerror) << endl;
             OutFile.flush();
             AFUNPTR fptr = (RTN_ReplaceProbed(rtndlerror, AFUNPTR(mydlerror)));
-            fptrdlerror = (CHAR_PTR (*)(void ))fptr;
+            fptrdlerror  = (CHAR_PTR(*)(void))fptr;
         }
     }
     // finished instrumentation
@@ -244,11 +222,11 @@ void ImgLoad(IMG img, void *v)
 /* Main function                                                         */
 /* ===================================================================== */
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     // Initialize Pin
     PIN_InitSymbols();
-    if (PIN_Init(argc,argv))
+    if (PIN_Init(argc, argv))
     {
         return Usage();
     }
@@ -261,7 +239,6 @@ int main(int argc, char *argv[])
 
     // Register the instrumentation callback
     IMG_AddInstrumentFunction(ImgLoad, 0);
-
 
     // Start the application
     PIN_StartProgramProbed(); // never returns

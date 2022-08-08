@@ -1,1 +1,1 @@
-Breakpoint 1,.*BareExitTrap
+(Thread 2 hit )?Breakpoint 1,.*BareExitTrap

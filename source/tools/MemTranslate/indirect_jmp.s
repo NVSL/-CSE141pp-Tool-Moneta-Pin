@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2014-2014 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <asm_macros.h>
 
 DECLARE_FUNCTION(main)

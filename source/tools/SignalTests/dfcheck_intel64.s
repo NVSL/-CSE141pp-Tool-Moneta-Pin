@@ -1,9 +1,14 @@
+/*
+ * Copyright (C) 2008-2017 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 .text
     .align 4
 .globl SetAndClearDF
 SetAndClearDF:
     std
-    movl    $1, DFSet
+    movl    $1, DFSet(%rip)
 
     /*
      * Delay a little while to make it more likely that a signal
@@ -14,7 +19,7 @@ SetAndClearDF:
     dec     %eax
     jne     .L3
 
-    movl    $0, DFSet
+    movl    $0, DFSet(%rip)
     cld
     ret
 
@@ -27,12 +32,12 @@ SignalHandler:
      */
     pushf
     pop     %rax
-    mov     %eax, Flags
+    mov     %eax, Flags(%rip)
 
     /*
      * The test is only interesting if the signal arrived while DF was
      * set (above in SetAndClearDF).
      */
-    mov     DFSet, %eax
-    mov     %eax, DidTest
+    mov     DFSet(%rip), %eax
+    mov     %eax, DidTest(%rip)
     ret

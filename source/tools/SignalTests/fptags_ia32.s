@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2008-2012 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 	.text
 #if defined(TARGET_MAC)
 .globl _DoMath

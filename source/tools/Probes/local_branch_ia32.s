@@ -1,10 +1,17 @@
+/*
+ * Copyright (C) 2007-2015 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
+#include <asm_macros.h>
+
 # this routine should generate an error because the target of a local branch
 # is within the probe space.
 #
-.global do_nothing
-.type do_nothing, function
+.global NAME(do_nothing)
+DECLARE_FUNCTION(do_nothing)
 
-do_nothing:
+NAME(do_nothing):
     xor %eax, %eax
 lab1:
     xor %eax, %eax
@@ -26,11 +33,11 @@ lab2:
 # is less than the size of the probe, and when relocated, the 
 # push of the original IP will cause a branch into the probe.
 #
-.global call_function
-.type call_function, function
+.global NAME(call_function)
+DECLARE_FUNCTION(call_function)
 
-call_function:
-    call do_nothing
+NAME(call_function):
+    call NAME(do_nothing)
     push %ebx
     pop %ebx
     ret
@@ -38,10 +45,10 @@ call_function:
 
 # Test an unconditional jump in the middle of the probe area.
 #	
-.global good_jump
-.type good_jump, function
+.global NAME(good_jump)
+DECLARE_FUNCTION(good_jump)
 
-good_jump:
+NAME(good_jump):
     xchg %eax, %eax
     jmp lab3
 
@@ -59,10 +66,10 @@ lab3:
 # This code should not be able to be relocated because of the
 # conditional jump as the last instruction.
 #	
-.global fall_thru
-.type fall_thru, function
+.global NAME(fall_thru)
+DECLARE_FUNCTION(fall_thru)
 
-fall_thru:
+NAME(fall_thru):
     xchg %eax, %eax
     jmp lab5
 
@@ -81,10 +88,10 @@ lab5:
 # This code should not be able to be relocated because of the
 # jump outside of the function.
 #	
-.global bad_jump
-.type bad_jump, function
+.global NAME(bad_jump)
+DECLARE_FUNCTION(bad_jump)
 
-bad_jump:
+NAME(bad_jump):
     xchg %eax, %eax
     jmp lab6
 
@@ -92,7 +99,7 @@ bad_jump:
     pop %ebx
 
 lab6:
-    jmp do_nothing	
+    jmp NAME(do_nothing)	
     xor %eax, %eax
     xor %eax, %eax
     ret
@@ -102,10 +109,10 @@ lab6:
 # This code should not be able to be relocated because of the
 # call function.
 #	
-.global bad_call
-.type bad_call, function
+.global NAME(bad_call)
+DECLARE_FUNCTION(bad_call)
 
-bad_call:
+NAME(bad_call):
     xchg %eax, %eax
     jmp lab7
 
@@ -113,7 +120,7 @@ bad_call:
     pop %ebx
 
 lab7:
-    call do_nothing	
+    call NAME(do_nothing)
     xor %eax, %eax
     xor %eax, %eax
     ret
@@ -123,10 +130,10 @@ lab7:
 # This code should not be able to be relocated because of the
 # target after the last instruction.
 #	
-.global high_target
-.type high_target, function
+.global NAME(high_target)
+DECLARE_FUNCTION(high_target)
 
-high_target:
+NAME(high_target):
     xchg %eax, %eax
     jmp lab8
 

@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2010-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 #ifdef TARGET_MAC
 .global _SupportsAvx2
 _SupportsAvx2:
@@ -6,8 +11,9 @@ _SupportsAvx2:
 .global SupportsAvx2
 SupportsAvx2:
 #endif
-    push    %rbp
-    mov     %rsp, %rbp
+    push %rbp
+    mov  %rsp, %rbp
+    push %rbx
     push %rcx
     push %rdx
     mov $1, %rax
@@ -23,18 +29,18 @@ SupportsAvx2:
     cmpq $6, %rax      # check OS has enabled both XMM and YMM state support
     jne NotSupported
     mov $7, %rax
-    mov $0, %rcx       # specify 0 for XFEATURE_ENABLED_MASK register
+    mov $0, %rcx       // Check for AVX2 support on CPU
     cpuid
-    andq $0x10, %rbx
-    cmpq $0x10, %rbx    
+    andq $0x20, %rbx   // bit 5 avx2
+    cmpq $0x20, %rbx   // bit 5 avx2 
     jne NotSupported  # no AVX2
     mov $1, %rax
 done:
     pop %rdx
     pop %rcx
+    pop %rbx
     leave
     ret
-
 
 NotSupported:
     mov $0, %rax

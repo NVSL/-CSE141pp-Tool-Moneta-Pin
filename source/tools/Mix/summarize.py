@@ -1,6 +1,12 @@
 #!/usr/bin/env python
+
+#
+# Copyright (C) 2007-2018 Intel Corporation.
+# SPDX-License-Identifier: MIT
+#
+
+
 # -*- python -*-
-# Mark Charney <mark.charney@intel.com>
 
 # Grab the BLOCKCOUNT and MAPPADDR lines from the mix-mt output and
 # attach that to a copy of the program. Run mix-mt with the -mapaddr
@@ -41,7 +47,7 @@ def combine_by_file_and_line(lines):
         else:
             tmap[key].count += f.count
     tmap['0-unknown'].pc = 'various'
-    return tmap.values()
+    return list(tmap.values())
         
     
 def summarize():
@@ -49,15 +55,15 @@ def summarize():
 
     #for k,f in pcmap.iteritems():
     #    print "%9s %8s %s:%s" % ( f.count, k, f.filename, f.line)
-    lines = pcmap.values()
+    lines = list(pcmap.values())
     # remove the zero entries
-    lines = filter(lambda(x): x.count != 0, lines)
+    lines = [x for x in lines if x.count != 0]
     # merge things with the same file and line
     lines = combine_by_file_and_line(lines)
     lines.sort(cmp=stat_sorter)
     for i,f in enumerate(lines):
         f.rank = i
-        print "AA%05d: %9s %8s %s:%d" % ( i, f.count, f.pc, f.filename, f.line)
+        print("AA%05d: %9s %8s %s:%d" % ( i, f.count, f.pc, f.filename, f.line))
     return lines
         
 def store_mapaddr(p):
@@ -131,8 +137,8 @@ def main(input_fn):
         if f.filename not in filenames and f.filename != 'unknown':
             filenames[f.filename]=1
 
-    for f in filenames.keys():
-        flines = filter(lambda(x): x.filename == f, lines)
+    for f in list(filenames.keys()):
+        flines = [x for x in lines if x.filename == f]
         flines.sort(cmp=stat_sorter_line)
         make_decorated_file(f,flines)
     
@@ -140,5 +146,5 @@ if len(sys.argv) != 2:
     sys.stderr.write("Need an input file\n")
     sys.exit(1)
 input_fn = sys.argv[1]
-print "Input file %s" % (input_fn)
+print("Input file %s" % (input_fn))
 main(input_fn)

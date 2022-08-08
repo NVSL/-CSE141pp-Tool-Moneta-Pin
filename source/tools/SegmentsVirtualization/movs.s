@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2007-2008 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 .global MovsTest
 .type MovsTest, @function
 

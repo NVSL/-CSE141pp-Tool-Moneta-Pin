@@ -1,4 +1,7 @@
-/*NO LEGAL*/
+/*
+ * Copyright (C) 2008-2019 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
     .text
 .globl foo

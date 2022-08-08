@@ -1,9 +1,8 @@
-/* ===================================================================== */
 /*
-  @ORIGINAL_AUTHOR: S. Bharadwaj Yadavalli
-*/
+ * Copyright (C) 2014-2016 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-/* ===================================================================== */
 /*! @file
  *  This file contains the assembly source of Pin unit test rep_ip_at_ipoint_after_tool
  */

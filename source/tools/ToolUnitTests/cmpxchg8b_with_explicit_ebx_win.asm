@@ -1,3 +1,8 @@
+;
+; Copyright (C) 2008-2012 Intel Corporation.
+; SPDX-License-Identifier: MIT
+;
+
 PUBLIC cmpxchg8_with_explicit_ebx
 
 

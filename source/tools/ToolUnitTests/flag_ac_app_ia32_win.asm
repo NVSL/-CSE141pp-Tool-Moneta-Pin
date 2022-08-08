@@ -1,3 +1,8 @@
+;
+; Copyright (C) 2009-2012 Intel Corporation.
+; SPDX-License-Identifier: MIT
+;
+
 PUBLIC SetAppFlags_asm
 PUBLIC ClearAcFlag_asm
 PUBLIC GetFlags_asm

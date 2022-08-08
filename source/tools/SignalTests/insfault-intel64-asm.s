@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2011-2017 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 # Each test sets these to register values at the time of the fault.
 #
 .comm   ExpectedPC,8,8
@@ -85,7 +90,10 @@ SetRegisters:
 .globl DoFaultRetSp
 DoFaultRetSp:
     call    SetRegisters
-    movq    $DoFaultRetSpLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultRetSpLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    $0, ExpectedRSP(%rip)
     movq    $0, %rsp
 DoFaultRetSpLab:
@@ -114,7 +122,10 @@ DoFaultRetTarg:
 .globl DoFaultRetImmSp
 DoFaultRetImmSp:
     call    SetRegisters
-    movq    $DoFaultRetImmSpLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultRetImmSpLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    $0, ExpectedRSP(%rip)
     movq    $0, %rsp
 DoFaultRetImmSpLab:
@@ -146,7 +157,10 @@ DoFaultRetImmTarg:
 .globl DoFaultCallSp
 DoFaultCallSp:
     call    SetRegisters
-    movq    $DoFaultCallSpLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultCallSpLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    $0, ExpectedRSP(%rip)
     movq    $0, %rsp
 DoFaultCallSpLab:
@@ -160,7 +174,10 @@ DoFaultCallSpLab:
     .align 4
 .globl DoFaultCallTarg
 DoFaultCallTarg:
-    movq    $Unmapped, ExpectedPC(%rip)
+    push    %rcx
+    lea     Unmapped(%rip), %rcx
+    mov     %rcx, ExpectedPC(%rip)
+    pop     %rcx
 #   Save the stack pointer in rax
     mov     %rsp, %rax
     subq    $8, %rax
@@ -177,11 +194,15 @@ DoFaultCallTarg:
 .globl DoFaultCallRegSp
 DoFaultCallRegSp:
     call    SetRegisters
-    movq    $DoFaultCallRegSpLab, ExpectedPC(%rip)
-    movq    $DoFaultCallRegSp, ExpectedRDI(%rip)
+    push    %rcx
+    lea     DoFaultCallRegSpLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
+    lea     DoFaultCallRegSp(%rip), %rdi
+    movq    %rdi, ExpectedRDI(%rip)
     movq    $0, ExpectedRSP(%rip)
     movq    $0, %rsp
-    movq    $DoFaultCallRegSp, %rdi
+    lea     DoFaultCallRegSp(%rip), %rdi
 DoFaultCallRegSpLab:
     call    *%rdi
 
@@ -193,14 +214,17 @@ DoFaultCallRegSpLab:
     .align 4
 .globl DoFaultCallRegTarg
 DoFaultCallRegTarg:
-    movq    $Unmapped, ExpectedPC(%rip)
+    push    %rcx
+    lea     Unmapped(%rip), %rcx
+    mov     %rcx, ExpectedPC(%rip)
+    pop     %rcx
 #   Save the stack pointer in rax
     mov     %rsp, %rax
     subq    $8, %rax
     mov     %rax, ExpectedRSP(%rip)
     call    SetRegisters
-    movq    $Unmapped, ExpectedRDI(%rip)
-    movq    $Unmapped, %rdi
+    lea     Unmapped(%rip), %rdi
+    mov     %rdi, ExpectedRDI(%rip)
     call    *%rdi
 
 
@@ -212,10 +236,14 @@ DoFaultCallRegTarg:
 .globl DoFaultCallMemSp
 DoFaultCallMemSp:
     call    SetRegisters
-    movq    $DoFaultCallMemSpLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultCallMemSpLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    lea     DoFaultCallMemSp(%rip), %rcx
+    movq    %rcx, Scratch(%rip)
+    pop     %rcx
     movq    $0, ExpectedRSP(%rip)
     movq    $0, %rsp
-    movq    $DoFaultCallMemSp, Scratch(%rip)
 DoFaultCallMemSpLab:
     call    *Scratch(%rip)
 
@@ -227,13 +255,17 @@ DoFaultCallMemSpLab:
     .align 4
 .globl DoFaultCallMemTarg
 DoFaultCallMemTarg:
-    movq    $Unmapped, ExpectedPC(%rip)
+    lea     Unmapped(%rip), %rax
+    mov     %rax, ExpectedPC(%rip)
 #   Save the stack pointer in rax
     mov     %rsp, %rax
     subq    $8, %rax
     mov     %rax, ExpectedRSP(%rip)
     call    SetRegisters
-    movq    $Unmapped, Scratch(%rip)
+    push    %rcx
+    lea     Unmapped(%rip), %rcx
+    movq    %rcx, Scratch(%rip)
+    pop     %rcx
     call    *Scratch(%rip)
 
 
@@ -244,7 +276,10 @@ DoFaultCallMemTarg:
     .align 4
 .globl DoFaultCallMemBadMem
 DoFaultCallMemBadMem:
-    movq    $DoFaultCallMemBadMemLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultCallMemBadMemLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    %rsp, ExpectedRSP(%rip)
     call    SetRegisters
 DoFaultCallMemBadMemLab:
@@ -261,7 +296,10 @@ DoFaultSegMov:
     movq    $0, %rax
     mov     %gs, %ax
     call    SetRegisters
-    movq    $DoFaultSegMovLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultSegMovLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    %rsp, ExpectedRSP(%rip)
 DoFaultSegMovLab:
     mov     %gs:0, %rdi
@@ -276,15 +314,18 @@ DoFaultSegMovLab:
 .globl DoFaultStringOp
 DoFaultStringOp:
     call    SetRegisters
-    movq    $DoFaultStringOpLab, ExpectedPC(%rip)
+    lea     DoFaultStringOpLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
     movq    $5, ExpectedRCX(%rip)
-    movq    $Unmapped, ExpectedRSI(%rip)
-    movq    $Scratch+5*4, ExpectedRDI(%rip)
+    lea     Unmapped(%rip), %rcx
+    mov     %rcx, ExpectedRSI(%rip)
+    lea     Scratch+5*4(%rip), %rcx
+    mov     %rcx, ExpectedRDI(%rip)
     movq    %rsp, ExpectedRSP(%rip)
     movq    $0x851, ExpectedEFLAGS(%rip)   # Expect Flags to have DF=0
     movq    $10, %rcx
-    mov     $Unmapped-5*4, %rsi
-    movq    $Scratch, %rdi
+    lea     Unmapped-5*4(%rip), %rsi
+    lea     Scratch(%rip), %rdi
     cld
 DoFaultStringOpLab:
     rep movsd
@@ -299,7 +340,10 @@ DoFaultStringOpLab:
 .globl DoFaultPushF
 DoFaultPushF:
     call    SetRegisters
-    movq    $DoFaultPushFLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultPushFLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    $0, ExpectedRSP(%rip)
     movq    $0, %rsp
 DoFaultPushFLab:
@@ -314,7 +358,10 @@ DoFaultPushFLab:
 .globl DoFaultPopF
 DoFaultPopF:
     call    SetRegisters
-    movq    $DoFaultPopFLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultPopFLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    $0, ExpectedRSP(%rip)
     movq    $0, %rsp
 DoFaultPopFLab:
@@ -329,7 +376,10 @@ DoFaultPopFLab:
 .globl DoFaultPush
 DoFaultPush:
     call    SetRegisters
-    movq    $DoFaultPushLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultPushLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    $0, ExpectedRSP(%rip)
     movq    $0, %rsp
 DoFaultPushLab:
@@ -344,7 +394,10 @@ DoFaultPushLab:
 .globl DoFaultPop
 DoFaultPop:
     call    SetRegisters
-    movq    $DoFaultPopLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultPopLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    $0, ExpectedRSP(%rip)
     movq    $0, %rsp
 DoFaultPopLab:
@@ -359,10 +412,13 @@ DoFaultPopLab:
 .globl DoFaultPushMem
 DoFaultPushMem:
     call    SetRegisters
-    movq    $DoFaultPushMemLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultPushMemLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    %rsp, ExpectedRSP(%rip)
 DoFaultPushMemLab:
-    pushq   Unmapped
+    push    Unmapped(%rip)
 
 
 # DoFaultPopMem()
@@ -373,10 +429,13 @@ DoFaultPushMemLab:
 .globl DoFaultPopMem
 DoFaultPopMem:
     call    SetRegisters
-    movq    $DoFaultPopMemLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultPopMemLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    %rsp, ExpectedRSP(%rip)
 DoFaultPopMemLab:
-    popq    Unmapped
+    popq    Unmapped(%rip)
 
 
 # DoFaultEnter()
@@ -387,7 +446,10 @@ DoFaultPopMemLab:
 .globl DoFaultEnter
 DoFaultEnter:
     call    SetRegisters
-    movq    $DoFaultEnterLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultEnterLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    $0, ExpectedRSP(%rip)
     movq    $0, %rsp
 DoFaultEnterLab:
@@ -402,7 +464,10 @@ DoFaultEnterLab:
 .globl DoFaultLeave
 DoFaultLeave:
     call    SetRegisters
-    movq    $DoFaultLeaveLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultLeaveLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    $0, ExpectedRSP(%rip)
     movq    $0, %rsp
 DoFaultLeaveLab:
@@ -424,8 +489,11 @@ DoFaultMaskmovdqu:
     movl    $0xffffffff, 12(%rsp)
     movq    0(%rsp), %xmm0
     movq    0(%rsp), %xmm1
-    movq    $Unmapped, %rdi
-    movq    $DoFaultMaskmovdquLab, ExpectedPC(%rip)
+    lea     Unmapped(%rip), %rdi
+    push    %rcx
+    lea     DoFaultMaskmovdquLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    %rsp, ExpectedRSP(%rip)
     movq    %rdi, ExpectedRDI(%rip)
 DoFaultMaskmovdquLab:
@@ -440,11 +508,14 @@ DoFaultMaskmovdquLab:
 .globl DoFaultBitTest
 DoFaultBitTest:
     call    SetRegisters
-    movq    $DoFaultBitTestLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultBitTestLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    %rsp, ExpectedRSP(%rip)
     movq    $16, ExpectedRDI(%rip)
     movq    $16, %rdi
-    movq    $Unmapped, %rcx
+    lea     Unmapped(%rip), %rcx
     movq    %rcx, ExpectedRCX(%rip)
 DoFaultBitTestLab:
     bt      %rdi, (%rcx)
@@ -458,9 +529,12 @@ DoFaultBitTestLab:
 .globl DoFaultMovSegSelector
 DoFaultMovSegSelector:
     call    SetRegisters
-    movq    $DoFaultMovSegSelectorLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultMovSegSelectorLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    %rsp, ExpectedRSP(%rip)
-    movq    $Unmapped, %rcx
+    lea     Unmapped(%rip), %rcx
     movq    %rcx, ExpectedRCX(%rip)
 DoFaultMovSegSelectorLab:
     mov     %fs, (%rcx)
@@ -473,7 +547,10 @@ DoFaultMovSegSelectorLab:
     .align 4
 .globl DoFaultJumpMemBadMem
 DoFaultJumpMemBadMem:
-    movq    $DoFaultJumpMemBadMemLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultJumpMemBadMemLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    %rsp, ExpectedRSP(%rip)
     call    SetRegisters
 DoFaultJumpMemBadMemLab:
@@ -487,11 +564,14 @@ DoFaultJumpMemBadMemLab:
     .align 4
 .globl DoFaultBadLoad
 DoFaultBadLoad:
-    movq    $DoFaultBadLoadLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultBadLoadLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    %rsp, ExpectedRSP(%rip)
     call    SetRegisters
 DoFaultBadLoadLab:
-    mov     Unmapped, %rdi
+    mov     Unmapped(%rip), %rdi
 
 
 # DoFaultBadStore()
@@ -501,11 +581,14 @@ DoFaultBadLoadLab:
     .align 4
 .globl DoFaultBadStore
 DoFaultBadStore:
-    movq    $DoFaultBadStoreLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultBadStoreLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    %rsp, ExpectedRSP(%rip)
     call    SetRegisters
 DoFaultBadStoreLab:
-    mov     %rdi, Unmapped
+    mov     %rdi, Unmapped(%rip)
 
 
 # DoFaultCmov()
@@ -515,11 +598,14 @@ DoFaultBadStoreLab:
     .align 4
 .globl DoFaultCmov
 DoFaultCmov:
-    movq    $DoFaultCmovLab, ExpectedPC(%rip)
+    push    %rcx
+    lea     DoFaultCmovLab(%rip), %rcx
+    movq    %rcx, ExpectedPC(%rip)
+    pop     %rcx
     movq    %rsp, ExpectedRSP(%rip)
     call    SetRegisters
 DoFaultCmovLab:
-    cmovb   Unmapped, %rdi  # SetRegisters() sets CF=1, so the condition is true.
+    cmovb   Unmapped(%rip), %rdi  # SetRegisters() sets CF=1, so the condition is true.
 
 
 # Unmapped()

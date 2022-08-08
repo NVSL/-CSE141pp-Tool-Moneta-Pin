@@ -1,4 +1,8 @@
-    
+/*
+ * Copyright (C) 2012-2012 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 #ifdef TARGET_MAC
 .globl _TestAccessViolations
 _TestAccessViolations:

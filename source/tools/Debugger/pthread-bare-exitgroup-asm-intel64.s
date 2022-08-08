@@ -1,11 +1,17 @@
-/*NO LEGAL*/
+/*
+ * Copyright (C) 2011-2019 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
     .text
 .globl BareExitGroup
-    .type   BareExitGroup, @function
 BareExitGroup:
     movq    $0,%rdi     # first argument: exit code
-    movq    $231,%rax   # system call number (sys_exit_group)
+#if defined(TARGET_MAC)
+    movq    $0x2000001,%rax    # system call number (exit) - exit process
+#elif defined(TARGET_LINUX)
+    movq    $231,%rax   # system call number (sys_exit_group) - exit process
+#endif
 
 .globl BareExitTrap
 BareExitTrap:

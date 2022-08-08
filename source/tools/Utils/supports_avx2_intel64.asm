@@ -1,3 +1,8 @@
+;
+; Copyright (C) 2010-2021 Intel Corporation.
+; SPDX-License-Identifier: MIT
+;
+
 PUBLIC SupportsAvx2
 PUBLIC Do_Xsave
 PUBLIC Do_Fxsave
@@ -9,7 +14,7 @@ PUBLIC Do_Fxrstor
 SupportsAvx2 PROC
     push    rbp
     mov     rbp, rsp
-    push    rax
+
     push    rbx
     push    rcx
     push    rdx
@@ -33,8 +38,8 @@ SupportsAvx2 PROC
     mov ecx, 0          
     mov     rax, 7
     cpuid
-    and ebx, 010h
-    cmp ebx, 010h 
+    and ebx, 020h
+    cmp ebx, 020h
     jne $lNOT_SUPPORTED  
     mov rax, 1
     jmp $lDONE3

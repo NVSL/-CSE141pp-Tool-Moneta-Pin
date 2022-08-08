@@ -1,9 +1,12 @@
-/*NO LEGAL*/
+/*
+ * Copyright (C) 2011-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
 #include <stdio.h>
 
 volatile int MyVariable = 89;
-int Iterations = 0;
+int Iterations          = 0;
 
 static void Breakpoint();
 

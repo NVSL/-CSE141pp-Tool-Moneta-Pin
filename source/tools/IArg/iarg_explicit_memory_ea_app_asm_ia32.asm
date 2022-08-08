@@ -1,3 +1,8 @@
+;
+; Copyright (C) 2014-2021 Intel Corporation.
+; SPDX-License-Identifier: MIT
+;
+
 PUBLIC DoExplicitMemoryOps
 
 
@@ -43,7 +48,7 @@ lbl7:
     mov [esp + 8], eax
 
 lbl8:
-    lea eax, fs:[-8]
+    lea eax, fs:-8  ; -8 is 32-bit segment offset
 
     mov eax, 0deadbeefH
 lbl9:

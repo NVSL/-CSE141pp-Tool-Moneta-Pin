@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2007-2007 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 # this code pattern tests an ip-relative displacement
 # on a call instruction in the probe area.
 	

@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2013-2017 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
 .data
 
@@ -10,6 +14,12 @@
 #ifdef CONTEXT_USING_AVX
 .extern ymmval
 .extern aymmval
+#endif
+#ifdef CONTEXT_USING_AVX512F
+.extern zmmval
+.extern azmmval
+.extern opmaskval
+.extern aopmaskval
 #endif
 .extern fpSaveArea
 
@@ -28,8 +38,10 @@
 # edx   - used (implicitly) by xsave
 # st0   - used (implicitly) for loading a value to the FPU stack
 # st2   - used for testing the FPU values
-# xmm0  - used for testing the sse values
-# ymm1  - used for testing the avx values
+# xmm0  - used for testing the sse (xmm) values
+# ymm1  - used for testing the avx (ymm) values
+# zmm5  - used for testing the avx512 (zmm) values
+# k3    - used for testing the opmask register values
 #ifndef TARGET_MAC
 .type ChangeRegsWrapper,  @function
 #endif
@@ -41,12 +53,18 @@ ChangeRegsWrapper:
     push    %ecx
     push    %edx
 
+#ifdef CONTEXT_USING_AVX512F
+    # Save the necessary mask registers
+    kmovw   %k3, %eax
+    push    %eax
+#endif
+
     # Allign the fpSaveArea
     lea     fpSaveArea, %ecx
     add     $0x40,%ecx
     and     $0xffffffc0,%ecx
     # Save the floating-point state
-#ifdef CONTEXT_USING_AVX
+#if defined(CONTEXT_USING_AVX) || defined(CONTEXT_USING_AVX512F)
     push    %edx
     xor     %edx, %edx
     mov     $7, %eax
@@ -67,12 +85,18 @@ ChangeRegsWrapper:
     call    SaveRegsToMem
 
     # Restore the floating-point state
-#ifdef CONTEXT_USING_AVX
+#if defined(CONTEXT_USING_AVX) || defined(CONTEXT_USING_AVX512F)
     mov     $7, %eax
     xrstor  (%ecx)
     pop     %edx
 #else
     fxrstor (%ecx)
+#endif
+
+#ifdef CONTEXT_USING_AVX512F
+    # Restore the mask registers
+    pop     %eax
+    kmovw   %eax, %k3
 #endif
 
     # Restore the GPRs
@@ -100,6 +124,12 @@ ChangeRegs:
 #ifdef CONTEXT_USING_AVX
     # TEST: load the new value to ymm1
     vmovdqu ymmval, %ymm1
+#endif
+#ifdef CONTEXT_USING_AVX512F
+    # TEST: load the new value to zmm5
+    vmovdqu32 zmmval, %zmm5
+    # TEST: load the new value to k3
+    kmovw   opmaskval, %k3
 #endif
     ret
 
@@ -131,5 +161,11 @@ SaveRegsToMem:
 #ifdef CONTEXT_USING_AVX
     # TEST: store the new value of ymm1
     vmovdqu %ymm1, aymmval
+#endif
+#ifdef CONTEXT_USING_AVX512F
+    # TEST: store the new value of zmm5
+    vmovdqu32 %zmm5, azmmval
+    # TEST: store the new value of k3
+    kmovw   %k3, aopmaskval
 #endif
     ret

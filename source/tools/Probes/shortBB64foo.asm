@@ -1,3 +1,8 @@
+;
+; Copyright (C) 2008-2008 Intel Corporation.
+; SPDX-License-Identifier: MIT
+;
+
 _TEXT SEGMENT
 foo PROC
     test ecx, ecx

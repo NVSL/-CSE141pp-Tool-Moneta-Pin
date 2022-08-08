@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2009-2012 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
 // This is a very short endless-loop function for 
 // checking probe insertion and moving IP of thread that fails on probe

@@ -1,4 +1,7 @@
-
+/*
+ * Copyright (C) 2009-2012 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
 .global SetAppFlags_asm
 .type SetAppFlags_asm, @function

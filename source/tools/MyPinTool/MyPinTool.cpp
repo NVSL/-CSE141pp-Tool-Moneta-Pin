@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2007-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
 /*! @file
  *  This is an example of the PIN tool that demonstrates some basic PIN APIs 
@@ -7,26 +11,27 @@
 #include "pin.H"
 #include <iostream>
 #include <fstream>
+using std::cerr;
+using std::endl;
+using std::string;
 
 /* ================================================================== */
-// Global variables 
+// Global variables
 /* ================================================================== */
 
-UINT64 insCount = 0;        //number of dynamically executed instructions
-UINT64 bblCount = 0;        //number of dynamically executed basic blocks
-UINT64 threadCount = 0;     //total number of threads, including main thread
+UINT64 insCount    = 0; //number of dynamically executed instructions
+UINT64 bblCount    = 0; //number of dynamically executed basic blocks
+UINT64 threadCount = 0; //total number of threads, including main thread
 
-std::ostream * out = &cerr;
+std::ostream* out = &cerr;
 
 /* ===================================================================== */
 // Command line switches
 /* ===================================================================== */
-KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE,  "pintool",
-    "o", "", "specify file name for MyPinTool output");
+KNOB< string > KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool", "o", "", "specify file name for MyPinTool output");
 
-KNOB<BOOL>   KnobCount(KNOB_MODE_WRITEONCE,  "pintool",
-    "count", "1", "count instructions, basic blocks and threads in the application");
-
+KNOB< BOOL > KnobCount(KNOB_MODE_WRITEONCE, "pintool", "count", "1",
+                       "count instructions, basic blocks and threads in the application");
 
 /* ===================================================================== */
 // Utilities
@@ -37,8 +42,9 @@ KNOB<BOOL>   KnobCount(KNOB_MODE_WRITEONCE,  "pintool",
  */
 INT32 Usage()
 {
-    cerr << "This tool prints out the number of dynamically executed " << endl <<
-            "instructions, basic blocks and threads in the application." << endl << endl;
+    cerr << "This tool prints out the number of dynamically executed " << endl
+         << "instructions, basic blocks and threads in the application." << endl
+         << endl;
 
     cerr << KNOB_BASE::StringKnobSummary() << endl;
 
@@ -73,7 +79,7 @@ VOID CountBbl(UINT32 numInstInBbl)
  * @param[in]   v        value specified by the tool in the TRACE_AddInstrumentFunction
  *                       function call
  */
-VOID Trace(TRACE trace, VOID *v)
+VOID Trace(TRACE trace, VOID* v)
 {
     // Visit every basic block in the trace
     for (BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl = BBL_Next(bbl))
@@ -93,10 +99,7 @@ VOID Trace(TRACE trace, VOID *v)
  * @param[in]   v               value specified by the tool in the 
  *                              PIN_AddThreadStartFunction function call
  */
-VOID ThreadStart(THREADID threadIndex, CONTEXT *ctxt, INT32 flags, VOID *v)
-{
-    threadCount++;
-}
+VOID ThreadStart(THREADID threadIndex, CONTEXT* ctxt, INT32 flags, VOID* v) { threadCount++; }
 
 /*!
  * Print out analysis results.
@@ -105,14 +108,14 @@ VOID ThreadStart(THREADID threadIndex, CONTEXT *ctxt, INT32 flags, VOID *v)
  * @param[in]   v               value specified by the tool in the 
  *                              PIN_AddFiniFunction function call
  */
-VOID Fini(INT32 code, VOID *v)
+VOID Fini(INT32 code, VOID* v)
 {
-    *out <<  "===============================================" << endl;
-    *out <<  "MyPinTool analysis results: " << endl;
-    *out <<  "Number of instructions: " << insCount  << endl;
-    *out <<  "Number of basic blocks: " << bblCount  << endl;
-    *out <<  "Number of threads: " << threadCount  << endl;
-    *out <<  "===============================================" << endl;
+    *out << "===============================================" << endl;
+    *out << "MyPinTool analysis results: " << endl;
+    *out << "Number of instructions: " << insCount << endl;
+    *out << "Number of basic blocks: " << bblCount << endl;
+    *out << "Number of threads: " << threadCount << endl;
+    *out << "===============================================" << endl;
 }
 
 /*!
@@ -122,18 +125,21 @@ VOID Fini(INT32 code, VOID *v)
  * @param[in]   argv            array of command line arguments, 
  *                              including pin -t <toolname> -- ...
  */
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     // Initialize PIN library. Print help message if -h(elp) is specified
-    // in the command line or the command line is invalid 
-    if( PIN_Init(argc,argv) )
+    // in the command line or the command line is invalid
+    if (PIN_Init(argc, argv))
     {
         return Usage();
     }
-    
+
     string fileName = KnobOutputFile.Value();
 
-    if (!fileName.empty()) { out = new std::ofstream(fileName.c_str());}
+    if (!fileName.empty())
+    {
+        out = new std::ofstream(fileName.c_str());
+    }
 
     if (KnobCount)
     {
@@ -146,18 +152,18 @@ int main(int argc, char *argv[])
         // Register function to be called when the application exits
         PIN_AddFiniFunction(Fini, 0);
     }
-    
-    cerr <<  "===============================================" << endl;
-    cerr <<  "This application is instrumented by MyPinTool" << endl;
-    if (!KnobOutputFile.Value().empty()) 
+
+    cerr << "===============================================" << endl;
+    cerr << "This application is instrumented by MyPinTool" << endl;
+    if (!KnobOutputFile.Value().empty())
     {
         cerr << "See file " << KnobOutputFile.Value() << " for analysis results" << endl;
     }
-    cerr <<  "===============================================" << endl;
+    cerr << "===============================================" << endl;
 
     // Start the program, never returns
     PIN_StartProgram();
-    
+
     return 0;
 }
 

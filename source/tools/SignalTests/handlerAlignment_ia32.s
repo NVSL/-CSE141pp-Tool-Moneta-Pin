@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2013-2013 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
 .text
 

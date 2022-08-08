@@ -1,33 +1,8 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright (C) 2014-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 #ifndef _CONTROL_MANAGER_H_
 #define _CONTROL_MANAGER_H_
 
@@ -41,25 +16,53 @@ END_LEGAL */
 #include "interactive_listener.H"
 
 //for backward compatibility with instlib
-extern "C"{
+extern "C"
+{
 #include "xed-interface.h"
 }
 
 using namespace std;
 
-namespace CONTROLLER 
+namespace CONTROLLER
 {
-
 static const UINT32 ALL_THREADS = 0xFFFF;
 
-typedef VOID (*CONTROL_HANDLER)(EVENT_TYPE, VOID *, CONTEXT *, VOID *, 
-                                THREADID tid, BOOL bcast);
-typedef struct {
+typedef VOID (*CONTROL_HANDLER)(EVENT_TYPE, VOID*, CONTEXT*, VOID*, THREADID tid, BOOL bcast);
+
+typedef struct
+{
     CONTROL_HANDLER handler;
     VOID* val;
-    bool  passContext;        // context requirement indicator 
+    bool passContext; // context requirement indicator
+    bool has_late_handler;
 } CONTROL_HANDLER_PARAMS;
 
+typedef struct
+{
+    string regionName;
+    UINT32 regionId;
+} CONTROL_REGION_INFO;
+
+typedef CONTROL_REGION_INFO (*REGION_INFO_CALLBACK)(THREADID tid, VOID*);
+
+// Set external region triggered callback
+typedef BOOL (*SET_EXTERNAL_REGION_TRIGGERED)(THREADID tid, EVENT_TYPE event_type, VOID* event_handler, VOID* param);
+
+// Thread translation callback
+typedef THREADID (*THREAD_TRANS_CALLBACK)(THREADID tid, VOID*);
+
+// This structure is used by iregions when creating
+// new alarms inside the controller.
+struct CHAIN_EVENT
+{
+    string chain_str;
+    VOID* event_handler;
+    THREADID tid;
+    //ctor
+    CHAIN_EVENT() : event_handler(0), tid(0) {}
+};
+
+typedef vector< CHAIN_EVENT > CHAIN_EVENT_VECTOR;
 
 //forward decelerations
 class CONTROL_CHAIN;
@@ -68,81 +71,130 @@ class CONTROLLER_EVENTS;
 class CONTROL_IREGIONS;
 class IREGION;
 
+typedef vector< CONTROL_CHAIN* > CONTROL_CHAIN_VECTOR;
+
 class CONTROL_ARGS
 {
-public:
+  public:
     //this class is used only by the region controller
-    CONTROL_ARGS(const string & prefix, string knob_family, 
-                 UINT32 instrument_order = CALL_ORDER_DEFAULT):
-      _prefix(prefix), _knob_family(knob_family),
-      _instrument_order(instrument_order){}
+    CONTROL_ARGS(const string& prefix, string knob_family, UINT32 instrument_order = CALL_ORDER_DEFAULT)
+        : _prefix(prefix), _knob_family(knob_family), _instrument_order(instrument_order)
+    {}
 
     string get_prefix() const { return _prefix; }
     string get_knob_family() const { return _knob_family; }
-    UINT32 get_instrument_order() const { return _instrument_order;}
+    UINT32 get_instrument_order() const { return _instrument_order; }
 
-private:
+  private:
     string _prefix;
     string _knob_family;
     UINT32 _instrument_order;
 };
 
-
 class CONTROL_MANAGER
 {
-public:
-    
-    CONTROL_MANAGER(const string prefix = "",
-                    const string family = "pintool:control",
-                    const string description = "Controller knobs");     
+  public:
+    CONTROL_MANAGER(const string prefix = "", const string family = "pintool:control",
+                    const string description = "Controller knobs");
     /* 
      * register tool handler to controller
      * ch - function to call when event triggers 
      * val - argument to pass for the called function
      * passContext - context's necessity in the called function
-     */   
-    VOID RegisterHandler(CONTROL_HANDLER ch, VOID* val, BOOL passContext);
-        
+     * late_ch - function to call when event triggers after instruction and analysis routines execution
+     */
+    VOID RegisterHandler(CONTROL_HANDLER ch, VOID* val, BOOL passContext = FALSE, CONTROL_HANDLER late_ch = NULL);
+
     // activate the controller
     VOID Activate();
 
-    //return the call order of the controller instrumantations
+    //return the call order of the controller instrumentations
     UINT32 GetInsOrder();
-    
+    UINT32 GetLateInsOrder();
+
     //return the thread id of the uniform sampling
     THREADID GetUniformTid();
-    
-    //return True if uniform sampling is used  
+
+    //return True if uniform sampling is used
     BOOL UniformActive();
-    
+
     //return True if uniform sampling id done
     BOOL UniformIsDone();
-    
+
     //return the last triggered region
-    IREGION * CurrentIregion(THREADID tid=0) const;
-    
+    IREGION* CurrentIregion(THREADID tid = 0) const;
+
     //return True if region control is active
     BOOL IregionsActive() const;
-    
+
     //FIXME:I think this is not required since we have the focus tid knob
-    BOOL StartTIDActive(){return FALSE;}
+    BOOL StartTIDActive() { return FALSE; }
 
     EVENT_TYPE AddEvent(const string& event_name);
     string EventToString(EVENT_TYPE ev);
     EVENT_TYPE EventStringToType(const string& event_name);
-    
+
     //adds a start event at the beginning of the run
     VOID AddDefaultStart();
-    
+
     //trigger all registered control handlers
     //eventID - the Id of the event
-    //tid     - the triggering thread 
-    //bcast   - whether this event affects all threads 
-    VOID Fire(EVENT_TYPE eventID, CONTEXT* ctx, VOID * ip, 
-              THREADID tid, BOOL bcast);
+    //tid     - the triggering thread
+    //bcast   - whether this event affects all threads
+    VOID Fire(EVENT_TYPE eventID, CONTEXT* ctx, VOID* ip, THREADID tid, BOOL bcast, const string& alarm_str,
+              VOID* event_handler = NULL, CONTROL_CHAIN* chain = NULL, UINT32 alarm_id = 0);
 
+    //trigger all registered late control handlers
+    //eventID - the Id of the event
+    //tid     - the triggering thread
+    //bcast   - whether this event affects all threads
+    VOID LateFire(EVENT_TYPE eventID, CONTEXT* ctxt, VOID* ip, THREADID tid, BOOL bcast);
 
-private:
+    // Return if the control manager has late handler
+    BOOL HasLateHandler() { return _late_handler; }
+
+    // Get specific alarm manager according to index
+    CONTROL_CHAIN* GetNextControlChain(UINT32 index, THREADID tid);
+
+    // Region name callback accessors
+    REGION_INFO_CALLBACK GetRegionInfoCallback() { return _region_info_callback; }
+    VOID* GetRegionInfoParam() { return _region_info_param; }
+    VOID SetRegionInfoCallback(REGION_INFO_CALLBACK region_info_callback, VOID* region_info_param)
+    {
+        _region_info_callback = region_info_callback;
+        _region_info_param    = region_info_param;
+    }
+
+    // Add external region chains
+    // This is an external API for the controller that enables
+    // other SDE tools to send chain strings to be activated by the controller
+    //external_region_chains - external region chains vector
+    //set_external_region_triggered - Pointer to a function that return is triggered event is legel
+    //param - parameter handle
+    VOID AddExternalRegionChains(CHAIN_EVENT_VECTOR* external_region_chains,
+                                 SET_EXTERNAL_REGION_TRIGGERED set_external_region_triggered, VOID* param);
+
+    // Thread translation callback
+    VOID SetThreadTransCallback(THREAD_TRANS_CALLBACK thread_trans_callback) { _thread_trans_callback = thread_trans_callback; }
+    THREAD_TRANS_CALLBACK GetThreadTransCallback() { return _thread_trans_callback; }
+
+    // Return if we do not need to stop to rep instructions
+    BOOL GetNonStopOnRep() { return _control_rep_nonstop_knob->Value(); }
+
+    // This API tell us that we are running code exclusion controller
+    // Therefor we need to include SSC marks in the exclusion region so that
+    // they will be excluded from real region
+    BOOL GetSscCodeExclusion() { return _control_ssc_code_exclude; }
+    VOID SetSscCodeExclusion(BOOL ssc_code_exclude) { _control_ssc_code_exclude = ssc_code_exclude; }
+
+    //return True if one of the control chains has start event
+    BOOL HasStartEvent();
+
+    //return True if one of the control chains has skip INT3, this is needed
+    //if other tools want to also instrument and emulate INT3 instruction
+    BOOL HasSkipInt3();
+
+  private:
     //enable those classes to access private members
     friend class CONTROL_CHAIN;
     friend class CONTROL_IREGIONS;
@@ -150,101 +202,127 @@ private:
 
     //add Icount instrumentation, used for logging controller events
     VOID AddIcountInstrumentation();
-    
+
     static VOID Fini(INT32 i, VOID* v);
     static VOID Trace(TRACE trace, VOID* v);
-    static VOID ICount(CONTROL_MANAGER* control_manager, 
-                       UINT32 nins, THREADID thread);
-    
+    static VOID ICount(CONTROL_MANAGER* control_manager, UINT32 nins, THREADID thread);
+    static VOID AfterForkInChildCallback(THREADID tid, const CONTEXT* ctxt, VOID* v);
+
     //return True is least one of the CONTROL_HANDLERS needs context.
     BOOL ShouldPassContext();
-    
-    //return True if one of the control chains has start event
-    BOOL HasStartEvent();
-     
+
+    // Set late handler flags in chains and alarms
+    VOID SetLateHandler();
+
     //translate all old controller knobs to the new "chain" format
-    VOID AddOldKnobs();
+    BOOL AddOldKnobs();
 
     //translate one old controller knob to the new chain format
     //the input is the knobs value
-    UINT32 CreateOldOne(const string& value, const string& control_event, 
-        const string& alarm, BOOL add_length=FALSE);
+    UINT32 CreateOldOne(const string& value, const string& control_event, const string& alarm, BOOL add_length = FALSE);
 
     //translate one old controller knob to the new chain format
     //the knob is of type APPEND
-    UINT32 CreateOld(KNOB<string>* knob, const string& control_event, 
-        const string& alarm, BOOL add_length=FALSE);
+    UINT32 CreateOld(KNOB< string >* knob, const string& control_event, const string& alarm, BOOL add_length = FALSE);
 
     //defines all controller knobs
     VOID InitKnobs();
-    
+
     //return the int Id of the chain
     UINT32 GetChainId(const string& chain_name);
-    
+
     //return a pointer to CHAIN with chain_id
     CONTROL_CHAIN* ChainById(UINT32 chain_id);
-        
-    BOOL PassContext(){return _pass_context;}
 
-    INTERACTIVE_LISTENER* GetListener(){return _interactive_listener;}
-  
+    BOOL PassContext() { return _pass_context; }
+
+    INTERACTIVE_LISTENER* GetListener() { return _interactive_listener; }
+
+    // Return is external region is active
+    BOOL ExternalRegionActive() const { return _external_region_chains != NULL; }
+
     string _control_family;
     string _prefix;
     string _family_description;
 
     UINT32 _call_order;
+    UINT32 _late_call_order;
 
     KNOB_COMMENT* _control_knob_family;
-    KNOB<string>* _control_knob;
-    KNOB<BOOL>* _control_debug_knob;
-    KNOB<BOOL>* _control_log_knob;
-    KNOB<string>* _control_log_file_knob;
-    KNOB<BOOL>* _control_default_start;
-  
-    KNOB<string>* _control_skip;
-    KNOB<string>* _control_length;
-    KNOB<string>* _control_start_address;
-    KNOB<string>* _control_stop_address;
-    KNOB<string>* _control_start_ssc;
-    KNOB<string>* _control_stop_ssc;
-    KNOB<string>* _control_start_itext;
-    KNOB<string>* _control_stop_itext;
-    KNOB<string>* _control_start_int3;
-    KNOB<string>* _control_stop_int3;
-    KNOB<string>* _control_start_isa_ext;
-    KNOB<string>* _control_stop_isa_ext;
-    KNOB<string>* _control_start_isa_ctg;
-    KNOB<string>* _control_stop_isa_ctg;
+    KNOB< string >* _control_knob;
+    KNOB< BOOL >* _control_debug_knob;
+    KNOB< BOOL >* _control_log_knob;
+    KNOB< string >* _control_log_file_knob;
+    KNOB< BOOL >* _control_default_start;
+    KNOB< BOOL >* _control_rep_nonstop_knob;
 
-    KNOB<string>* _control_interactive;
+    KNOB< string >* _control_skip;
+    KNOB< string >* _control_length;
+    KNOB< string >* _control_start_address;
+    KNOB< string >* _control_stop_address;
+    KNOB< string >* _control_start_ssc;
+    KNOB< string >* _control_stop_ssc;
+    KNOB< string >* _control_start_itext;
+    KNOB< string >* _control_stop_itext;
+    KNOB< string >* _control_start_int3;
+    KNOB< string >* _control_stop_int3;
+    KNOB< string >* _control_start_isa_ext;
+    KNOB< string >* _control_stop_isa_ext;
+    KNOB< string >* _control_start_isa_ctg;
+    KNOB< string >* _control_stop_isa_ctg;
+    KNOB< string >* _control_interactive;
+    KNOB< string >* _control_input_file_knob;
 
     CONTROL_IREGIONS* _iregions;
 
+    // Chains from external tool
+    CHAIN_EVENT_VECTOR* _external_region_chains;
+    SET_EXTERNAL_REGION_TRIGGERED _set_external_region_triggered;
+    VOID* _external_region_param;
+
     //list of all control chains
-    list<CONTROL_CHAIN*>  _control_chain;
-    
+    list< CONTROL_CHAIN* > _control_chain;
+
     //list of all chains translated from legacy knobs
-    list<CONTROL_CHAIN*>  _legacy_control_chain;
-    
+    list< CONTROL_CHAIN* > _legacy_control_chain;
+
     //list of registered control handlers
-    list<CONTROL_HANDLER_PARAMS> _control_handler;
-    
+    list< CONTROL_HANDLER_PARAMS > _control_handler;
+
+    //list of late registered control handlers
+    list< CONTROL_HANDLER_PARAMS > _late_control_handler;
+    BOOL _late_handler;
+
     //the events manager
     CONTROLLER_EVENTS _events;
-    
+
     BOOL _pass_context;
     UINT64 _icount[PIN_MAX_THREADS]; //for log generation
     ALARM_MANAGER* _uniform_alarm;
     ofstream _out;
+    ifstream _in;
 
     //this class is responsible for adding a default start event instrumentation
     INIT_ALARM _init_alarm;
 
     INTERACTIVE_LISTENER* _interactive_listener;
-    
-};//class
 
-} //namespace
+    CONTROL_CHAIN_VECTOR* _control_chain_thread_vec[PIN_MAX_THREADS];
+
+    // Region info callback
+    REGION_INFO_CALLBACK _region_info_callback;
+    VOID* _region_info_param;
+
+    // Thread translation callback
+    THREAD_TRANS_CALLBACK _thread_trans_callback;
+
+    // This flag tell us that we are running code exclusion controller
+    // Therefor we need to include SSC marks in the exclusion region so that
+    // they will be excluded from real region
+    BOOL _control_ssc_code_exclude;
+}; //class
+
+} // namespace CONTROLLER
 //must be here due to code dependency
 #include "regions_control.H"
 #endif

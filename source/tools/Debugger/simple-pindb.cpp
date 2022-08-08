@@ -1,33 +1,8 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright (C) 2009-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * This application is a general test of features in  the 'pindb' debugger.
  * Since the debugger is not symbolic, the input commands must reference raw
@@ -43,26 +18,25 @@ END_LEGAL */
 #include <fstream>
 #include <string>
 #include <cstring>
+#include "tool_macros.h"
 
 #if defined(_MSC_VER)
-    typedef unsigned __int64 ADDR;
+typedef unsigned __int64 ADDR;
 #elif defined(__GNUC__)
-    #include <stdint.h>
-    typedef uint64_t ADDR;
+#include <stdint.h>
+typedef uint64_t ADDR;
 #endif
 
+static void GenerateBasicScripts(const char*, const char*);
+static void GenerateDetachScripts(const char*, const char*);
+static void GenerateStepCustomBreakScripts(const char*, const char*);
+extern "C" void Breakpoint() ASMNAME("Breakpoint");
+extern "C" void Breakpoint2() ASMNAME("Breakpoint2");
+extern "C" void DoRegMemTest() ASMNAME("DoRegMemTest");
+extern "C" void DoStepCustomBreakTest() ASMNAME("DoStepCustomBreakTest");
+extern "C" long MemTestData[] ASMNAME("MemTestData");
 
-static void GenerateBasicScripts(const char *, const char *);
-static void GenerateDetachScripts(const char *, const char *);
-static void GenerateStepCustomBreakScripts(const char *, const char *);
-extern "C" void Breakpoint();
-extern "C" void Breakpoint2();
-extern "C" void DoRegMemTest();
-extern "C" void DoStepCustomBreakTest();
-extern "C" long MemTestData[];
-
-
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     if (argc != 1 && argc != 4)
     {
@@ -106,22 +80,21 @@ int main(int argc, char **argv)
     return 0;
 }
 
-
 /*!
  * Generate the PinDB scripts for the "basic" test.
  *
  *  @param[in] inFile       Name of the generated PinDB command input file.
  *  @param[in] compareFile  Name of the generated PinDB expected output comparison file.
  */
-static void GenerateBasicScripts(const char *inFile, const char *compareFile)
+static void GenerateBasicScripts(const char* inFile, const char* compareFile)
 {
     std::ofstream in(inFile);
     std::ofstream compare(compareFile);
 
-    ADDR bpAddr1 = reinterpret_cast<ADDR>(&Breakpoint);
-    ADDR bpAddr2 = reinterpret_cast<ADDR>(&Breakpoint2);
-    ADDR memTestAddr = reinterpret_cast<ADDR>(&DoRegMemTest);
-    ADDR memDataAddr = reinterpret_cast<ADDR>(&MemTestData[0]);
+    ADDR bpAddr1     = reinterpret_cast< ADDR >(&Breakpoint);
+    ADDR bpAddr2     = reinterpret_cast< ADDR >(&Breakpoint2);
+    ADDR memTestAddr = reinterpret_cast< ADDR >(&DoRegMemTest);
+    ADDR memDataAddr = reinterpret_cast< ADDR >(&MemTestData[0]);
 
     in << std::hex << std::noshowbase;
     compare << std::hex << std::noshowbase;
@@ -167,7 +140,7 @@ static void GenerateBasicScripts(const char *inFile, const char *compareFile)
 #elif defined(TARGET_IA32)
     std::string reg = "ecx";
 #else
-# error "Need TARGET_IA32 or TARGET_IA32E defined"
+#error "Need TARGET_IA32 or TARGET_IA32E defined"
 #endif
     in << "p $" << reg << "\n";
     compare << "0x0*12345678\n";
@@ -194,11 +167,9 @@ static void GenerateBasicScripts(const char *inFile, const char *compareFile)
     compare << "Stack tracing disabled.\n";
 
     in << "c\n";
-    compare << "Test completed\n";
     compare << "Program exited with 0\n";
     in << "q\n";
 }
-
 
 /*!
  * Generate the PinDB scripts for the "detach" test.
@@ -206,13 +177,13 @@ static void GenerateBasicScripts(const char *inFile, const char *compareFile)
  *  @param[in] inFile       Name of the generated PinDB command input file.
  *  @param[in] compareFile  Name of the generated PinDB expected output comparison file.
  */
-static void GenerateDetachScripts(const char *inFile, const char *compareFile)
+static void GenerateDetachScripts(const char* inFile, const char* compareFile)
 {
     std::ofstream in(inFile);
     std::ofstream compare(compareFile);
 
-    ADDR bpAddr1 = reinterpret_cast<ADDR>(&Breakpoint);
-    ADDR bpAddr2 = reinterpret_cast<ADDR>(&Breakpoint2);
+    ADDR bpAddr1 = reinterpret_cast< ADDR >(&Breakpoint);
+    ADDR bpAddr2 = reinterpret_cast< ADDR >(&Breakpoint2);
 
     in << std::hex << std::noshowbase;
     compare << std::hex << std::noshowbase;
@@ -231,20 +202,19 @@ static void GenerateDetachScripts(const char *inFile, const char *compareFile)
     in << "q\n";
 }
 
-
 /*!
  * Generate the PinDB scripts for the "step-custom-break" test.
  *
  *  @param[in] inFile       Name of the generated PinDB command input file.
  *  @param[in] compareFile  Name of the generated PinDB expected output comparison file.
  */
-static void GenerateStepCustomBreakScripts(const char *inFile, const char *compareFile)
+static void GenerateStepCustomBreakScripts(const char* inFile, const char* compareFile)
 {
     std::ofstream in(inFile);
     std::ofstream compare(compareFile);
 
-    ADDR bpAddr = reinterpret_cast<ADDR>(&DoStepCustomBreakTest);
-    ADDR watchAddr = reinterpret_cast<ADDR>(&Breakpoint);
+    ADDR bpAddr    = reinterpret_cast< ADDR >(&DoStepCustomBreakTest);
+    ADDR watchAddr = reinterpret_cast< ADDR >(&Breakpoint);
 
     in << std::hex << std::noshowbase;
     compare << std::hex << std::noshowbase;
@@ -258,8 +228,8 @@ static void GenerateStepCustomBreakScripts(const char *inFile, const char *compa
     in << "k\n";
     in << "q\n";
 
-    compare << "Thread .* stopped at .* \\(after step\\)\n";                        // step over NOP
-    compare << "Thread .* stopped at .* \\(at tool breakpoint\\)\n";                // attempt to step over CALL
+    compare << "Thread .* stopped at .* \\(after step\\)\n";         // step over NOP
+    compare << "Thread .* stopped at .* \\(at tool breakpoint\\)\n"; // attempt to step over CALL
     compare << "Triggered breakpoint #1: break if jump to 0x" << watchAddr << "\n";
-    compare << "Thread .* stopped at 0x" << watchAddr << " \\(after step\\)\n";     // step into CALL
+    compare << "Thread .* stopped at 0x" << watchAddr << " \\(after step\\)\n"; // step into CALL
 }

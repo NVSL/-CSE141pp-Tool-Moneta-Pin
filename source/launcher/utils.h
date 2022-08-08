@@ -1,8 +1,10 @@
 /*
+ * Copyright (C) 2012-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
+/*
  * utils.h
- *
- *  Created on: May 28, 2012
- *      Author: bkemper
  */
 
 #ifndef UTILS_H_
@@ -17,16 +19,14 @@
 #include <assert.h>
 #include <string.h>
 
-/*!
- * Appends 3 constant null terminated strings.
+/*
+ * Appends 3 constant null terminated path strings.
  * @param s1
  * @param s2
  * @param s3
- * @return The concatenated string
+ * @return The concatenated path string
  */
-char* append3(const char* s1, const char* s2, const char* s3);
-
-int get_gcc_version_string(int* major, int* minor);
+char* appendPath(const char* s1, const char* s2, const char* s3);
 
 /*!
  * Checks the return value of libc calls and prints the correct error message on error.
@@ -62,7 +62,7 @@ unsigned int check_not_directory(const char* fn);
  * @param buff A buffer to create the complete path
  * @return 1 if file exist and not a directory
  */
-unsigned int check_file_in_dir(const char* fn, const char *dir, char *buff);
+unsigned int check_file_in_dir(const char* fn, const char* dir, char* buff);
 
 /*!
  * Searches for the given executable in the directories list at the PATH environment variable,
@@ -70,7 +70,7 @@ unsigned int check_file_in_dir(const char* fn, const char *dir, char *buff);
  * @param exename The executable path
  * @return The directory it was found in, or null if not found.
  */
-char *search_in_path(const char *exename);
+char* search_in_path(const char* exename);
 
 /*!
  * Finds the base path (containing directory) of the given executable.
@@ -78,6 +78,5 @@ char *search_in_path(const char *exename);
  * @return The base path
  */
 char* find_base_path(char* filename);
-
 
 #endif /* UTILS_H_ */

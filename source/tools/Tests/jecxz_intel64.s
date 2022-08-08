@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2014-2014 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 #ifdef TARGET_MAC
 #define NAME(x) _##x
 #else

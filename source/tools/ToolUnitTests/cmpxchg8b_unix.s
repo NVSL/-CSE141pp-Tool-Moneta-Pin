@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2006-2012 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 .text
 .global cmpxchg8_base
 cmpxchg8_base:

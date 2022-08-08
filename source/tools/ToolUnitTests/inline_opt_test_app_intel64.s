@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2010-2014 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 .global scratchVals
 
 .text

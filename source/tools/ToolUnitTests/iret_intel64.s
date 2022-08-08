@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2010-2017 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 #
 # Test for iretq in 64 bit mode.
 # The code for iretd is commented out, since I haven't been able to find
@@ -24,13 +29,15 @@
 # here:   
 #         ret
 
-iretq_func:
-        mov $-2,%rax
+iret_func:
+        mov $-1,%rax
         iretq
-        
-.type iretqTest, @function
-.global iretqTest
-iretqTest:
+
+#ifndef TARGET_MAC        
+.type iretTest, @function
+#endif
+.global iretTest
+iretTest:
         push    %rbx
         # Move the stack pointer down, so that we can check that the stack pointer
         # is correctly restored by the iretq
@@ -42,7 +49,7 @@ iretqTest:
         pushfq
         mov     %cs,%rax
         push    %rax
-        call    iretq_func
+        call    iret_func
         pop     %rbx
         ret
         

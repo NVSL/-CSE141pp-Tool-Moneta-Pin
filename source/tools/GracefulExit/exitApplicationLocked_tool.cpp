@@ -1,33 +1,8 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright (C) 2012-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * This tool tests for graceful exit when a tool calls PIN_ExitApplication while holding the client lock. PIN_ExitApplication is
  * called from the thread-start callback of the secondary thread, thus terminating the application.
@@ -39,9 +14,10 @@ END_LEGAL */
 #include <cassert>
 #include <fstream>
 #include "pin.H"
+using std::endl;
+using std::string;
 
 using std::ofstream;
-
 
 /**************************************************
  * Global variables                               *
@@ -55,10 +31,10 @@ static TLS_KEY tidKey;
 
 // Knobs for defining the output filenames. We need one for the thread start callbacks
 // and one for the thread fini callbacks.
-KNOB<string> KnobThreadsStartsFile(KNOB_MODE_WRITEONCE,  "pintool",
-    "startsfile", "threadStarts.out", "specify file name for thread start callbacks output");
-KNOB<string> KnobThreadsFinisFile(KNOB_MODE_WRITEONCE,  "pintool",
-    "finisfile", "threadFinis.out", "specify file name for thread fini callbacks output");
+KNOB< string > KnobThreadsStartsFile(KNOB_MODE_WRITEONCE, "pintool", "startsfile", "threadStarts.out",
+                                     "specify file name for thread start callbacks output");
+KNOB< string > KnobThreadsFinisFile(KNOB_MODE_WRITEONCE, "pintool", "finisfile", "threadFinis.out",
+                                    "specify file name for thread fini callbacks output");
 
 // Output file streams
 ofstream startsOut;
@@ -76,20 +52,20 @@ volatile int numOfActiveThreads = 0;
 // and checked in the makefile.
 volatile int totalNumOfThreads = 0;
 
-
 /**************************************************
  * Utility functions                              *
  **************************************************/
 // Retrieve a tid stored in the TLS.
-static OS_THREAD_ID* GetTLSData(THREADID threadIndex) {
-    return static_cast<OS_THREAD_ID*>(PIN_GetThreadData(tidKey, threadIndex));
+static OS_THREAD_ID* GetTLSData(THREADID threadIndex)
+{
+    return static_cast< OS_THREAD_ID* >(PIN_GetThreadData(tidKey, threadIndex));
 }
-
 
 /**************************************************
  * Analysis routines                              *
  **************************************************/
-static VOID ThreadStart(THREADID threadIndex, CONTEXT* c, INT32 flags, VOID *v) {
+static VOID ThreadStart(THREADID threadIndex, CONTEXT* c, INT32 flags, VOID* v)
+{
     ++numOfActiveThreads;
     ++totalNumOfThreads;
     OS_THREAD_ID* tidData = new OS_THREAD_ID(PIN_GetTid());
@@ -97,7 +73,8 @@ static VOID ThreadStart(THREADID threadIndex, CONTEXT* c, INT32 flags, VOID *v) 
     startsOut << *tidData << endl;
     fprintf(stderr, "TOOL: <%d> thread start, active: %d\n", *tidData, numOfActiveThreads);
     fflush(stderr);
-    if (threadIndex != 0) {
+    if (threadIndex != 0)
+    {
         PIN_LockClient(); // take the client lock recursively
         fprintf(stderr, "TOOL: <%d> is now calling PIN_ExitApplication with the client lock held.\n", *tidData);
         fflush(stderr);
@@ -105,7 +82,8 @@ static VOID ThreadStart(THREADID threadIndex, CONTEXT* c, INT32 flags, VOID *v) 
     }
 }
 
-static VOID ThreadFini(THREADID threadIndex, CONTEXT const * c, INT32 code, VOID *v) {
+static VOID ThreadFini(THREADID threadIndex, CONTEXT const* c, INT32 code, VOID* v)
+{
     --numOfActiveThreads;
     OS_THREAD_ID* tidData = GetTLSData(threadIndex);
     finisOut << *tidData << endl;
@@ -113,18 +91,18 @@ static VOID ThreadFini(THREADID threadIndex, CONTEXT const * c, INT32 code, VOID
     fflush(stderr);
 }
 
-static VOID Fini(INT32 code, VOID* v) {
+static VOID Fini(INT32 code, VOID* v)
+{
     OS_THREAD_ID tid = PIN_GetTid();
     fprintf(stderr, "TOOL: <%d> fini function %d %d\n", tid, numOfActiveThreads, totalNumOfThreads);
     fflush(stderr);
 }
 
-
 /**************************************************
  * Main function                                  *
  **************************************************/
-int main(INT32 argc, CHAR **argv) {
-
+int main(INT32 argc, CHAR** argv)
+{
     // Initialize Pin and TLS
     PIN_InitSymbols();
     PIN_Init(argc, argv);

@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2012-2014 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 .text
 .align 4
 

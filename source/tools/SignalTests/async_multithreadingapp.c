@@ -1,33 +1,8 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright (C) 2010-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * This test application creates 2 processes:
  *   Parent process: Just to monitor whether child process got into deadlock or not.
@@ -59,8 +34,7 @@ END_LEGAL */
 #include <sys/wait.h>
 #include <errno.h>
 
-
-#define COUNT   10
+#define COUNT 10
 #define USLEEP_TIME 25000
 
 #define DEADLOCK_TIMEOUT 10
@@ -71,64 +45,66 @@ volatile unsigned SigCount = 0;
 
 static void Handle(int);
 static void TimeoutHandler(int);
-static void *DoSysCallTillSignalsDone(void *);
+static void* DoSysCallTillSignalsDone(void*);
 void DoToolAnalysis();
 void sig_hand(int);
-
 
 int main()
 {
     sigset_t sigset;
     sigemptyset(&sigset);
     sigaddset(&sigset, SIGCHLD);
-    if (sigprocmask(SIG_BLOCK, &sigset, NULL) < 0) {
+    if (sigprocmask(SIG_BLOCK, &sigset, NULL) < 0)
+    {
         fprintf(stderr, "Unable to mask SIGCHLD");
         return 1;
     }
     signal(SIGCHLD, sig_hand);
-    
+
     int fd[2];
-    if (pipe(fd) == -1){
+    if (pipe(fd) == -1)
+    {
         fprintf(stderr, "Unable to open pipe ");
         return 1;
     }
     pid_t child = fork();
-    if (child) 
+    if (child)
     {
         // Parent proc
-        close(fd[1]);          // Close unused write end 
+        close(fd[1]); // Close unused write end
 
         struct timespec timeout;
-        timeout.tv_sec = 1200; //20 mins
+        timeout.tv_sec  = 1200; //20 mins
         timeout.tv_nsec = 0;
         char buf[2];
-        
-        read(fd[0], &buf, 1); // wait until child activate timer 
+
+        read(fd[0], &buf, 1); // wait until child activate timer
         close(fd[0]);
-        
+
         // This process waits enough for the child process to complete
-        if (sigtimedwait(&sigset, NULL, &timeout) < 0) 
+        if (sigtimedwait(&sigset, NULL, &timeout) < 0)
         {
-            if (errno == EAGAIN) 
+            if (errno == EAGAIN)
             {
                 fprintf(stderr, "Timeout, killing child\n");
-                kill (child, SIGKILL);
+                kill(child, SIGKILL);
                 return 1;
             }
-            else 
+            else
             {
                 fprintf(stderr, "Error in sigtimedwait");
                 return 1;
             }
         }
         int status;
-        
+
         // In case child process is still running the test fails (assuming deadlock occurred)
-        if (waitpid(child, &status, 0) < 0) {
+        if (waitpid(child, &status, 0) < 0)
+        {
             fprintf(stderr, "Error on waitpid");
             return 1;
         }
-        if(WIFEXITED(status) && WEXITSTATUS(status)==0)
+        if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
         {
             fprintf(stderr, "Parent - terminate OK\n");
             return 0;
@@ -138,13 +114,13 @@ int main()
     else
     {
         // inside child
-        close(fd[0]);          // Close unused read end 
+        close(fd[0]); // Close unused read end
         struct sigaction sigact;
         struct itimerval itval;
         pthread_t tid;
 
         sigact.sa_handler = Handle;
-        sigact.sa_flags = 0;
+        sigact.sa_flags   = 0;
         sigemptyset(&sigact.sa_mask);
 
         if (sigaction(SIGVTALRM, &sigact, 0) == -1)
@@ -155,7 +131,7 @@ int main()
 
         struct sigaction sigact_timeout;
         sigact_timeout.sa_handler = TimeoutHandler;
-        sigact_timeout.sa_flags = 0;
+        sigact_timeout.sa_flags   = 0;
         sigfillset(&sigact_timeout.sa_mask);
 
         if (sigaction(SIGALRM, &sigact_timeout, 0) == -1)
@@ -163,7 +139,6 @@ int main()
             fprintf(stderr, "Child - Unable to set up timeout handler\n");
             return 1;
         }
-
 
         // Create a new thread that calls a system call in a loop
         if (pthread_create(&tid, 0, DoSysCallTillSignalsDone, 0) != 0)
@@ -173,18 +148,18 @@ int main()
         }
 
         // Set timer to create an async signals
-        itval.it_interval.tv_sec = 0;
+        itval.it_interval.tv_sec  = 0;
         itval.it_interval.tv_usec = USLEEP_TIME;
-        itval.it_value.tv_sec = 0;
-        itval.it_value.tv_usec = USLEEP_TIME;
+        itval.it_value.tv_sec     = 0;
+        itval.it_value.tv_usec    = USLEEP_TIME;
         if (setitimer(ITIMER_VIRTUAL, &itval, 0) == -1)
         {
             fprintf(stderr, "Child - Unable to set up timer\n");
             return 1;
         }
-       
+
         close(fd[1]); // send EOF to signal parent that timer is on
-       
+
         alarm(DEADLOCK_TIMEOUT);
 
         /*
@@ -196,7 +171,7 @@ int main()
             doToolAnalysis();
         }
 
-        itval.it_value.tv_sec = 0;
+        itval.it_value.tv_sec  = 0;
         itval.it_value.tv_usec = 0;
         if (setitimer(ITIMER_VIRTUAL, &itval, 0) == -1)
         {
@@ -221,11 +196,13 @@ static void Handle(int sig)
 
 static void TimeoutHandler(int a)
 {
-    printf("Deadlock timeout occured, it seems that PIN couldn't get the app and tool out of a deadlock situation. SigCount: %u\n", SigCount);
+    printf(
+        "Deadlock timeout occured, it seems that PIN couldn't get the app and tool out of a deadlock situation. SigCount: %u\n",
+        SigCount);
     exit(1);
 }
 
-static void *DoSysCallTillSignalsDone(void *v)
+static void* DoSysCallTillSignalsDone(void* v)
 {
     /*
      * Call a system call in the loop .

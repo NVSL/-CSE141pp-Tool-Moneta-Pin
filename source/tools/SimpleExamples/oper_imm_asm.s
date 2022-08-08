@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2015-2015 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <asm_macros.h>
 
 DECLARE_FUNCTION(operImmCmds)

@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2008-2012 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 .intel_syntax noprefix
 .globl main
 .type main, function

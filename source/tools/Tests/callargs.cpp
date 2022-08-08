@@ -1,37 +1,15 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright (C) 2004-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 #include "pin.H"
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
+using std::endl;
+using std::hex;
+using std::ios;
 
 #if defined(TARGET_MAC)
 #define FUNC_PREFIX "_"
@@ -53,10 +31,7 @@ VOID MmapArgs(ADDRINT ra, ADDRINT arg1, ADDRINT arg2, ADDRINT arg3, ADDRINT arg4
     TraceFile << "  called from " << ra << endl;
 }
 
-VOID CallArgs(ADDRINT arg1)
-{
-    TraceFile << "Call(" << arg1 << ")" << endl;
-}
+VOID CallArgs(ADDRINT arg1) { TraceFile << "Call(" << arg1 << ")" << endl; }
 
 VOID FoobarArgs(ADDRINT arg1, ADDRINT arg2)
 {
@@ -68,7 +43,7 @@ VOID FoobarArgs(ADDRINT arg1, ADDRINT arg2)
     }
 }
 
-VOID BazArg(ADDRINT * arg1, ADDRINT * arg2, ADDRINT * arg3)
+VOID BazArg(ADDRINT* arg1, ADDRINT* arg2, ADDRINT* arg3)
 {
     TraceFile << "Baz(" << *arg1 << "," << *arg2 << "," << *arg3 << ")" << endl;
     *arg1 = 4;
@@ -76,52 +51,51 @@ VOID BazArg(ADDRINT * arg1, ADDRINT * arg2, ADDRINT * arg3)
     *arg3 = 6;
 }
 
-LOCALVAR ADDRINT foobarAddress = 0;
+static ADDRINT foobarAddress = 0;
 
 /* ===================================================================== */
 
-VOID Ins(INS ins, VOID *v)
+VOID Ins(INS ins, VOID* v)
 {
-    if (!INS_IsCall(ins))
-        return;
+    if (!INS_IsCall(ins)) return;
 
-    if (foobarAddress != 0
-        && INS_IsDirectBranchOrCall(ins)
-        && INS_DirectBranchOrCallTargetAddress(ins) == foobarAddress)
+    if (foobarAddress != 0 && INS_IsDirectControlFlow(ins) && INS_DirectControlFlowTargetAddress(ins) == foobarAddress)
     {
         TraceFile << "Instrument call to foobar" << endl;
-        INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(FoobarArgs), IARG_G_ARG0_CALLER, IARG_G_ARG1_CALLER, IARG_END);
+        INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(FoobarArgs), IARG_FUNCARG_CALLSITE_VALUE, 0, IARG_FUNCARG_CALLSITE_VALUE, 1,
+                       IARG_END);
     }
 
     static BOOL first = true;
 
-    if (!first)
-        return;
+    if (!first) return;
 
     first = false;
 
-    INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(CallArgs),  IARG_G_ARG0_CALLER, IARG_END);
-    
+    INS_InsertCall(ins, IPOINT_BEFORE, AFUNPTR(CallArgs), IARG_FUNCARG_CALLSITE_VALUE, 0, IARG_END);
 }
 
 /* ===================================================================== */
 
-VOID Image(IMG img, VOID *v)
+VOID Image(IMG img, VOID* v)
 {
     RTN mmapRtn = RTN_FindByName(img, FUNC_PREFIX "mmap");
     if (RTN_Valid(mmapRtn))
     {
         RTN_Open(mmapRtn);
-        RTN_InsertCall(mmapRtn, IPOINT_BEFORE, AFUNPTR(MmapArgs), IARG_RETURN_IP, IARG_G_ARG0_CALLEE, IARG_G_ARG1_CALLEE, IARG_G_ARG2_CALLEE, IARG_G_ARG3_CALLEE, IARG_G_ARG4_CALLEE, IARG_G_ARG5_CALLEE, IARG_END);
+        RTN_InsertCall(mmapRtn, IPOINT_BEFORE, AFUNPTR(MmapArgs), IARG_RETURN_IP, IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+                       IARG_FUNCARG_ENTRYPOINT_VALUE, 1, IARG_FUNCARG_ENTRYPOINT_VALUE, 2, IARG_FUNCARG_ENTRYPOINT_VALUE, 3,
+                       IARG_FUNCARG_ENTRYPOINT_VALUE, 4, IARG_FUNCARG_ENTRYPOINT_VALUE, 5, IARG_END);
         RTN_Close(mmapRtn);
     }
     RTN foobarRtn = RTN_FindByName(img, FUNC_PREFIX "foobar");
     if (RTN_Valid(foobarRtn))
     {
         foobarAddress = RTN_Address(foobarRtn);
-        
+
         RTN_Open(foobarRtn);
-        RTN_InsertCall(foobarRtn, IPOINT_BEFORE, AFUNPTR(FoobarArgs), IARG_G_ARG0_CALLEE, IARG_G_ARG1_CALLEE, IARG_END);
+        RTN_InsertCall(foobarRtn, IPOINT_BEFORE, AFUNPTR(FoobarArgs), IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+                       IARG_FUNCARG_ENTRYPOINT_VALUE, 1, IARG_END);
         RTN_Close(foobarRtn);
     }
 
@@ -129,22 +103,19 @@ VOID Image(IMG img, VOID *v)
     if (RTN_Valid(bazRtn))
     {
         RTN_Open(bazRtn);
-        RTN_InsertCall(bazRtn, IPOINT_BEFORE, AFUNPTR(BazArg), IARG_FUNCARG_ENTRYPOINT_REFERENCE, 0, IARG_FUNCARG_ENTRYPOINT_REFERENCE, 1, IARG_FUNCARG_ENTRYPOINT_REFERENCE, 2, IARG_END);
+        RTN_InsertCall(bazRtn, IPOINT_BEFORE, AFUNPTR(BazArg), IARG_FUNCARG_ENTRYPOINT_REFERENCE, 0,
+                       IARG_FUNCARG_ENTRYPOINT_REFERENCE, 1, IARG_FUNCARG_ENTRYPOINT_REFERENCE, 2, IARG_END);
         RTN_Close(bazRtn);
     }
-
 }
 
 /* ===================================================================== */
 
-VOID Fini(INT32 code, VOID *v)
-{
-    TraceFile.close();
-}
+VOID Fini(INT32 code, VOID* v) { TraceFile.close(); }
 
 /* ===================================================================== */
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     PIN_InitSymbols();
     PIN_Init(argc, argv);
@@ -160,7 +131,7 @@ int main(int argc, char *argv[])
 
     // Never returns
     PIN_StartProgram();
-    
+
     return 0;
 }
 

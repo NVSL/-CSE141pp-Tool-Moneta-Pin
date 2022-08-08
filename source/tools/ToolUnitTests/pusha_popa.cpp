@@ -1,33 +1,8 @@
-/*BEGIN_LEGAL 
-Intel Open Source License 
+/*
+ * Copyright (C) 2007-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-Copyright (c) 2002-2015 Intel Corporation. All rights reserved.
- 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.  Redistributions
-in binary form must reproduce the above copyright notice, this list of
-conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.  Neither the name of
-the Intel Corporation nor the names of its contributors may be used to
-endorse or promote products derived from this software without
-specific prior written permission.
- 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE INTEL OR
-ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-END_LEGAL */
 /*
  * This test verifies that Pin correctly translates PUSHA and POPA
  * instructions (both 32- and 16-bit variants).
@@ -35,7 +10,15 @@ END_LEGAL */
 
 #include <iostream>
 #include <string.h>
-#include "pin.H"
+#ifdef _MSC_VER
+typedef unsigned __int16 uint16_t;
+typedef unsigned __int32 uint32_t;
+#else
+#include <stdint.h>
+#endif
+
+typedef uint16_t UINT16;
+typedef uint32_t UINT32;
 
 #ifdef TARGET_WINDOWS
 #define ASMNAME(name)
@@ -67,31 +50,24 @@ struct REGS32
     UINT32 edi;
 };
 
-
 static bool TestPushA16();
 static bool TestPopA16();
 static bool TestPushA32();
 static bool TestPopA32();
 
-extern "C" void DoPushA16(const REGS16 *, REGS16 *, UINT16 *) ASMNAME("DoPushA16");
-extern "C" void DoPopA16(const REGS16 *, REGS16 *) ASMNAME("DoPopA16");
-extern "C" void DoPushA32(const REGS32 *, REGS32 *, UINT32 *) ASMNAME("DoPushA32");
-extern "C" void DoPopA32(const REGS32 *, REGS32 *) ASMNAME("DoPopA32");
+extern "C" void DoPushA16(const REGS16*, REGS16*, UINT16*) ASMNAME("DoPushA16");
+extern "C" void DoPopA16(const REGS16*, REGS16*) ASMNAME("DoPopA16");
+extern "C" void DoPushA32(const REGS32*, REGS32*, UINT32*) ASMNAME("DoPushA32");
+extern "C" void DoPopA32(const REGS32*, REGS32*) ASMNAME("DoPopA32");
 
-
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
-    if (!TestPushA16())
-        return 1;
-    if (!TestPopA16())
-        return 1;
-    if (!TestPushA32())
-        return 1;
-    if (!TestPopA32())
-        return 1;
+    if (!TestPushA16()) return 1;
+    if (!TestPopA16()) return 1;
+    if (!TestPushA32()) return 1;
+    if (!TestPopA32()) return 1;
     return 0;
 }
-
 
 static bool TestPushA16()
 {
@@ -154,7 +130,6 @@ static bool TestPushA16()
     return true;
 }
 
-
 static bool TestPopA16()
 {
     REGS16 inRegs;
@@ -209,7 +184,6 @@ static bool TestPopA16()
     }
     return true;
 }
-
 
 static bool TestPushA32()
 {
@@ -271,7 +245,6 @@ static bool TestPushA32()
     }
     return true;
 }
-
 
 static bool TestPopA32()
 {

@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2012-2012 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 .globl very_big
 .type very_big, @function
 

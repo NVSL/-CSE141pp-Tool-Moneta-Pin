@@ -1,3 +1,7 @@
+;
+; Copyright (C) 2008-2012 Intel Corporation.
+; SPDX-License-Identifier: MIT
+;
 
 COMMENT // contains important code patterns
 COMMENT // doesn't actually do anything

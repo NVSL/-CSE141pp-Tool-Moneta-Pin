@@ -1,12 +1,14 @@
-/*NO LEGAL*/
+/*
+ * Copyright (C) 2009-2021 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
 #include <stdio.h>
 
-
 int A[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-int Sum = 0;
+int Sum   = 0;
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     int i;
 
@@ -29,7 +31,7 @@ int main(int argc, char **argv)
     }
 
     printf("Hello world\n");
-    for (i = 0;  i < 10;  i++)
+    for (i = 0; i < 10; i++)
         Sum += A[i];
 
     printf("Sum is %d\n", Sum);

@@ -1,3 +1,8 @@
+;
+; Copyright (C) 2011-2012 Intel Corporation.
+; SPDX-License-Identifier: MIT
+;
+
 PUBLIC Fld1Fstp_a
 PUBLIC Fld1Fstp_b
 PUBLIC Fld1Fstp_c

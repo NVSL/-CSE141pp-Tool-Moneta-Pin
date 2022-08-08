@@ -1,4 +1,9 @@
 /*
+ * Copyright (C) 2005-2012 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
+/*
  * CopyWithXmm(char *dest, const char *src, size_t size)
  *
  *  Copy a memory block using XMM registers.  Assumes that

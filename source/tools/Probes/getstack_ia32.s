@@ -1,14 +1,21 @@
-.global getstack
-.type getstack, @function
+/*
+ * Copyright (C) 2011-2015 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
 
-getstack:
+#include "asm_macros.h"
+
+.global NAME(getstack)
+DECLARE_FUNCTION(getstack)
+
+NAME(getstack):
    mov %esp, %eax
    ret
 
-.global getebp
-.type getebp, @function
+.global NAME(getebp)
+DECLARE_FUNCTION(getebp)
 
-getebp:
+NAME(getebp):
    mov %ebp, %eax
    ret
 

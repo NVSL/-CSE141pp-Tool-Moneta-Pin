@@ -1,5 +1,7 @@
-ORIGINAL_AUTHOR: Tipp Moseley (tipp.moseley@colorado.edu)
-
+#
+# Copyright (C) 2004-2016 Intel Corporation.
+# SPDX-License-Identifier: MIT
+#
 
 MAID - Memory Address Information Dumper
 --

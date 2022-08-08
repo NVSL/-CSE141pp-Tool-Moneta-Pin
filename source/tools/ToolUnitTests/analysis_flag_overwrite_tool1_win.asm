@@ -1,3 +1,8 @@
+;
+; Copyright (C) 2007-2012 Intel Corporation.
+; SPDX-License-Identifier: MIT
+;
+
 PUBLIC ReadWriteFlags_asm
 
 .686

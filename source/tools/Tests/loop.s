@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2008-2009 Intel Corporation.
+ * SPDX-License-Identifier: MIT
+ */
+
 	.intel_syntax noprefix
 	.text
 # RTN of size 200000 tickled a bug in symbol handling	
