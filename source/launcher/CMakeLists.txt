@@ -16,6 +16,7 @@ message(STATUS "==> Entering launcher_u")
 #
 
 add_executable(launcher)
+set(__linux_os true)
 if (__linux_os)
     target_link_libraries(launcher crtbeginend c-static os-apis)
     set(lflags -Wl,-z,noexecstack -Wl,-z,relro,-z,now ${CBIN_OPT} -nostdlib -static)
@@ -24,6 +25,7 @@ else()
 endif()
 target_link_options(launcher BEFORE PUBLIC ${lflags})
 
+message(STATUS "==> Entering launcher_u 2")
 ### End Targets
 
 #
@@ -44,6 +46,7 @@ set(include
     ${CMAKE_SOURCE_DIR}/External/System/Include_unix
     ${CMAKE_SOURCE_DIR}/External/pindwarf/include
     ${CMAKE_SOURCE_DIR}/External/jitprofiling
+    ${CMAKE_SOURCE_DIR}/Source/pin
     ${CMAKE_SOURCE_DIR}/Source/pin
     ${CMAKE_SOURCE_DIR}/Source/pin/include_wrappers_unix
     ${CMAKE_SOURCE_DIR}/Source/pin/include
@@ -93,12 +96,14 @@ target_compile_definitions(launcher PRIVATE ${defs})
 #
 # Source files
 #
+message(STATUS "==> Entering launcher_u 3")
 
 if (__linux_os)
     set(SOURCES utils.c os_specific_l.c launcher_u.c)
 elseif (__mac_os)
     set(SOURCES utils.c os_specific_m.c launcher_u.c)
 endif()
+
 
 target_sources(launcher PUBLIC ${SOURCES})
 set_target_properties(launcher PROPERTIES OUTPUT_NAME pin)

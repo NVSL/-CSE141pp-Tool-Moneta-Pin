@@ -37,7 +37,7 @@ static char** build_user_argv(int* argc)
 }
 
 /* For testing purposes only */
-#if 0
+#if 1
 static void check_environment()
 {
     char* s;
@@ -113,7 +113,7 @@ int main(int orig_argc, char** orig_argv)
     path_to_cmd = child_argv[0];
 
     /* For testing purposes */
-#if 0
+#if 1
      check_environment();
      print_argv_chunks(child_argv);
 #endif

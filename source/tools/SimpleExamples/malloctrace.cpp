@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2004-2021 Intel Corporation.
  * SPDX-License-Identifier: MIT
@@ -10,6 +11,10 @@
 #include "pin.H"
 #include <iostream>
 #include <fstream>
+//#include "H5Cpp.h" // Hdf5
+
+//H5::H5File mem_file;
+
 using std::cerr;
 using std::cout;
 using std::endl;
